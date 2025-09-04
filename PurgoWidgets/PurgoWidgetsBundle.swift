@@ -11,8 +11,12 @@ import SwiftUI
 @main
 struct PurgoWidgetsBundle: WidgetBundle {
     var body: some Widget {
-        PurgoWidgets()
-        PurgoWidgetsControl()
-        PurgoWidgetsLiveActivity()
+        PurgoWidget() // Our custom lock screen widget
+        
+        #if canImport(ActivityKit)
+        if #available(iOS 16.1, *) {
+            PurgoTimerLiveActivity() // Our custom Live Activity
+        }
+        #endif
     }
 }

@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3128497E2E68066100554BD1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3128497D2E68066100554BD1 /* GoogleService-Info.plist */; };
+		312849842E680C5400554BD1 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 312849832E680C5400554BD1 /* FirebaseAnalytics */; };
+		312849862E680C5400554BD1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 312849852E680C5400554BD1 /* FirebaseAuth */; };
+		312849882E680C5400554BD1 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 312849872E680C5400554BD1 /* FirebaseDatabase */; };
+		3128498A2E680CDF00554BD1 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 312849892E680CDF00554BD1 /* FirebaseCore */; };
+		3128498C2E680CF000554BD1 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498B2E680CF000554BD1 /* GoogleSignIn */; };
+		3128498E2E680CF000554BD1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498D2E680CF000554BD1 /* GoogleSignInSwift */; };
+		312849902E680D5000554BD1 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498F2E680D5000554BD1 /* FirebaseFirestore */; };
+		31DED1CA2E600E8D001DBBB9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 31DED1C92E600E8D001DBBB9 /* WidgetKit.framework */; };
+		31DED1CC2E600E8D001DBBB9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 31DED1CB2E600E8D001DBBB9 /* SwiftUI.framework */; };
+		31DED1DD2E600E8E001DBBB9 /* PurgoWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 31DED1C72E600E8D001DBBB9 /* PurgoWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		31DED1832E600662001DBBB9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +35,62 @@
 			remoteGlobalIDString = 31DED1732E600661001DBBB9;
 			remoteInfo = Purgo;
 		};
+		31DED1DB2E600E8E001DBBB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 31DED16C2E600661001DBBB9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 31DED1C62E600E8D001DBBB9;
+			remoteInfo = PurgoWidgetsExtension;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		31DED1E22E600E8E001DBBB9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				31DED1DD2E600E8E001DBBB9 /* PurgoWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		3128497D2E68066100554BD1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		31DED1742E600661001DBBB9 /* Purgo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Purgo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		31DED1822E600662001DBBB9 /* PurgoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PurgoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		31DED18C2E600662001DBBB9 /* PurgoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PurgoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		31DED1C72E600E8D001DBBB9 /* PurgoWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PurgoWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		31DED1C92E600E8D001DBBB9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		31DED1CB2E600E8D001DBBB9 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		31DED1C02E600B10001DBBB9 /* Exceptions for "Purgo" folder in "Purgo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 31DED1732E600661001DBBB9 /* Purgo */;
+		};
+		31DED1E12E600E8E001DBBB9 /* Exceptions for "PurgoWidgets" folder in "PurgoWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 31DED1C62E600E8D001DBBB9 /* PurgoWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		31DED1762E600661001DBBB9 /* Purgo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				31DED1C02E600B10001DBBB9 /* Exceptions for "Purgo" folder in "Purgo" target */,
+			);
 			path = Purgo;
 			sourceTree = "<group>";
 		};
@@ -45,6 +104,14 @@
 			path = PurgoUITests;
 			sourceTree = "<group>";
 		};
+		31DED1CD2E600E8D001DBBB9 /* PurgoWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				31DED1E12E600E8E001DBBB9 /* Exceptions for "PurgoWidgets" folder in "PurgoWidgetsExtension" target */,
+			);
+			path = PurgoWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +119,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3128498C2E680CF000554BD1 /* GoogleSignIn in Frameworks */,
+				312849882E680C5400554BD1 /* FirebaseDatabase in Frameworks */,
+				312849842E680C5400554BD1 /* FirebaseAnalytics in Frameworks */,
+				3128498E2E680CF000554BD1 /* GoogleSignInSwift in Frameworks */,
+				3128498A2E680CDF00554BD1 /* FirebaseCore in Frameworks */,
+				312849862E680C5400554BD1 /* FirebaseAuth in Frameworks */,
+				312849902E680D5000554BD1 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -69,6 +143,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		31DED1C42E600E8D001DBBB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				31DED1CC2E600E8D001DBBB9 /* SwiftUI.framework in Frameworks */,
+				31DED1CA2E600E8D001DBBB9 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,7 +161,10 @@
 				31DED1762E600661001DBBB9 /* Purgo */,
 				31DED1852E600662001DBBB9 /* PurgoTests */,
 				31DED18F2E600662001DBBB9 /* PurgoUITests */,
+				31DED1CD2E600E8D001DBBB9 /* PurgoWidgets */,
+				31DED1C82E600E8D001DBBB9 /* Frameworks */,
 				31DED1752E600661001DBBB9 /* Products */,
+				3128497D2E68066100554BD1 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,8 +174,18 @@
 				31DED1742E600661001DBBB9 /* Purgo.app */,
 				31DED1822E600662001DBBB9 /* PurgoTests.xctest */,
 				31DED18C2E600662001DBBB9 /* PurgoUITests.xctest */,
+				31DED1C72E600E8D001DBBB9 /* PurgoWidgetsExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		31DED1C82E600E8D001DBBB9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				31DED1C92E600E8D001DBBB9 /* WidgetKit.framework */,
+				31DED1CB2E600E8D001DBBB9 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,16 +198,25 @@
 				31DED1702E600661001DBBB9 /* Sources */,
 				31DED1712E600661001DBBB9 /* Frameworks */,
 				31DED1722E600661001DBBB9 /* Resources */,
+				31DED1E22E600E8E001DBBB9 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				31DED1DC2E600E8E001DBBB9 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				31DED1762E600661001DBBB9 /* Purgo */,
 			);
 			name = Purgo;
 			packageProductDependencies = (
+				312849832E680C5400554BD1 /* FirebaseAnalytics */,
+				312849852E680C5400554BD1 /* FirebaseAuth */,
+				312849872E680C5400554BD1 /* FirebaseDatabase */,
+				312849892E680CDF00554BD1 /* FirebaseCore */,
+				3128498B2E680CF000554BD1 /* GoogleSignIn */,
+				3128498D2E680CF000554BD1 /* GoogleSignInSwift */,
+				3128498F2E680D5000554BD1 /* FirebaseFirestore */,
 			);
 			productName = Purgo;
 			productReference = 31DED1742E600661001DBBB9 /* Purgo.app */;
@@ -163,6 +268,28 @@
 			productReference = 31DED18C2E600662001DBBB9 /* PurgoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		31DED1C62E600E8D001DBBB9 /* PurgoWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 31DED1DE2E600E8E001DBBB9 /* Build configuration list for PBXNativeTarget "PurgoWidgetsExtension" */;
+			buildPhases = (
+				31DED1C32E600E8D001DBBB9 /* Sources */,
+				31DED1C42E600E8D001DBBB9 /* Frameworks */,
+				31DED1C52E600E8D001DBBB9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				31DED1CD2E600E8D001DBBB9 /* PurgoWidgets */,
+			);
+			name = PurgoWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = PurgoWidgetsExtension;
+			productReference = 31DED1C72E600E8D001DBBB9 /* PurgoWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +311,9 @@
 						CreatedOnToolsVersion = 16.3;
 						TestTargetID = 31DED1732E600661001DBBB9;
 					};
+					31DED1C62E600E8D001DBBB9 = {
+						CreatedOnToolsVersion = 16.3;
+					};
 				};
 			};
 			buildConfigurationList = 31DED16F2E600661001DBBB9 /* Build configuration list for PBXProject "Purgo" */;
@@ -195,6 +325,10 @@
 			);
 			mainGroup = 31DED16B2E600661001DBBB9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				312849802E6806CE00554BD1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 31DED1752E600661001DBBB9 /* Products */;
 			projectDirPath = "";
@@ -203,6 +337,7 @@
 				31DED1732E600661001DBBB9 /* Purgo */,
 				31DED1812E600662001DBBB9 /* PurgoTests */,
 				31DED18B2E600662001DBBB9 /* PurgoUITests */,
+				31DED1C62E600E8D001DBBB9 /* PurgoWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -212,6 +347,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3128497E2E68066100554BD1 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,6 +359,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		31DED18A2E600662001DBBB9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		31DED1C52E600E8D001DBBB9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +396,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		31DED1C32E600E8D001DBBB9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +415,11 @@
 			isa = PBXTargetDependency;
 			target = 31DED1732E600661001DBBB9 /* Purgo */;
 			targetProxy = 31DED18D2E600662001DBBB9 /* PBXContainerItemProxy */;
+		};
+		31DED1DC2E600E8E001DBBB9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 31DED1C62E600E8D001DBBB9 /* PurgoWidgetsExtension */;
+			targetProxy = 31DED1DB2E600E8E001DBBB9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -391,12 +546,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Purgo/Purgo.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SGGTQLJURG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Purgo/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Purgo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -414,12 +573,14 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.arbenterprise.Purgo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Debug;
@@ -430,12 +591,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Purgo/Purgo.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = SGGTQLJURG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Purgo/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Purgo;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -453,12 +618,14 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.arbenterprise.Purgo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.4;
 			};
 			name = Release;
@@ -553,6 +720,65 @@
 			};
 			name = Release;
 		};
+		31DED1DF2E600E8E001DBBB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SGGTQLJURG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PurgoWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PurgoWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arbenterprise.Purgo.PurgoWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		31DED1E02E600E8E001DBBB9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SGGTQLJURG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PurgoWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PurgoWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arbenterprise.Purgo.PurgoWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -592,7 +818,73 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		31DED1DE2E600E8E001DBBB9 /* Build configuration list for PBXNativeTarget "PurgoWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				31DED1DF2E600E8E001DBBB9 /* Debug */,
+				31DED1E02E600E8E001DBBB9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.2.0;
+			};
+		};
+		312849802E6806CE00554BD1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		312849832E680C5400554BD1 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		312849852E680C5400554BD1 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		312849872E680C5400554BD1 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		312849892E680CDF00554BD1 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		3128498B2E680CF000554BD1 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 312849802E6806CE00554BD1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		3128498D2E680CF000554BD1 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 312849802E6806CE00554BD1 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		3128498F2E680D5000554BD1 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 31DED16C2E600661001DBBB9 /* Project object */;
 }
