@@ -402,7 +402,14 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Session Tracking
     func updateUserStats(with session: CompletedSession) async {
-        guard let userId = currentUser?.id else { return }
+        print("🔄 updateUserStats called for session: \(session.sessionType.rawValue)")
+        
+        guard let userId = currentUser?.id else { 
+            print("❌ No current user ID available")
+            return 
+        }
+        
+        print("✅ Current user ID: \(userId)")
         
         do {
             let userRef = db.collection("users").document(userId)
@@ -420,18 +427,49 @@ class FirebaseManager: ObservableObject {
                 "createdAt": Date()
             ]
             
+            print("📝 Saving session data to Firestore...")
             try await sessionRef.setData(sessionData)
+            print("✅ Session data saved successfully")
             
             // Update user stats
-            try await userRef.updateData([
+            let updateData: [String: Any] = [
                 "totalSessions": FieldValue.increment(Int64(1)),
                 "totalTimeSpent": FieldValue.increment(Int64(session.actualDuration)),
                 "longestSession": max(currentUser?.longestSession ?? 0, session.actualDuration),
                 "\(session.sessionType.rawValue)SessionCount": FieldValue.increment(Int64(1)),
                 "lastActiveAt": Date()
-            ])
+            ]
+            
+            print("📊 Updating user stats: \(updateData)")
+            try await userRef.updateData(updateData)
+            print("✅ User stats updated in Firestore")
+            
+            // Refresh the user data to update the UI
+            print("🔄 Fetching updated user data...")
+            let updatedUserDoc = try await userRef.getDocument()
+            
+            if updatedUserDoc.exists {
+                print("✅ User document exists, parsing data...")
+                if let updatedUser = try? updatedUserDoc.data(as: PurgoUser.self) {
+                    DispatchQueue.main.async {
+                        self.currentUser = updatedUser
+                        print("🎉 UI updated! New stats: \(updatedUser.totalSessions) sessions, \(Int(updatedUser.totalTimeSpent/60)) minutes")
+                        print("🔍 Sauna: \(updatedUser.saunaSessionCount), Cold: \(updatedUser.coldSessionCount)")
+                    }
+                } else {
+                    print("❌ Failed to parse updated user data")
+                    // Try to get the raw data for debugging
+                    if let rawData = updatedUserDoc.data() {
+                        print("📋 Raw user data: \(rawData)")
+                    }
+                }
+            } else {
+                print("❌ User document doesn't exist after update")
+            }
             
         } catch {
+            print("❌ Error updating user stats: \(error)")
+            print("🔍 Error details: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 self.errorMessage = error.localizedDescription
             }
@@ -440,8 +478,10 @@ class FirebaseManager: ObservableObject {
     
     // MARK: - Leaderboards
     func loadLeaderboard(period: LeaderboardPeriod, scope: LeaderboardScope) async {
-        // Implementation for leaderboard loading
-        isLoading = true
+        print("🏆 Loading leaderboard for \(period.displayName) \(scope.displayName)")
+        DispatchQueue.main.async {
+            self.isLoading = true
+        }
         
         do {
             // Calculate date range based on period
@@ -458,12 +498,34 @@ class FirebaseManager: ObservableObject {
                 startDate = calendar.dateInterval(of: .month, for: now)?.start ?? now
             }
             
+            print("📅 Date range: \(startDate) to \(now)")
+            
+            // Determine which users to include based on scope
+            var targetUserIds: Set<String> = []
+            
+            switch scope {
+            case .friends:
+                // Include current user and friends
+                if let currentUserId = currentUser?.id {
+                    targetUserIds.insert(currentUserId)
+                }
+                for friend in friends {
+                    targetUserIds.insert(friend.id)
+                }
+                print("👥 Friends scope: Including \(targetUserIds.count) users")
+            case .local, .state, .country:
+                // For now, include all users (can be enhanced later with location filtering)
+                targetUserIds = [] // Empty means include all
+                print("🌍 Global scope: Including all users")
+            }
+            
             // Query sessions in the time period
-            let query = db.collection("sessions")
+            var query = db.collection("sessions")
                 .whereField("createdAt", isGreaterThanOrEqualTo: startDate)
                 .whereField("createdAt", isLessThanOrEqualTo: now)
             
             let snapshot = try await query.getDocuments()
+            print("📊 Found \(snapshot.documents.count) sessions in time period")
             
             // Process leaderboard data
             var userStats: [String: (totalTime: TimeInterval, sessionCount: Int)] = [:]
@@ -473,6 +535,11 @@ class FirebaseManager: ObservableObject {
                 if let userId = data["userId"] as? String,
                    let duration = data["duration"] as? TimeInterval {
                     
+                    // Filter by scope if needed
+                    if !targetUserIds.isEmpty && !targetUserIds.contains(userId) {
+                        continue
+                    }
+                    
                     if userStats[userId] == nil {
                         userStats[userId] = (0, 0)
                     }
@@ -480,6 +547,8 @@ class FirebaseManager: ObservableObject {
                     userStats[userId]?.sessionCount += 1
                 }
             }
+            
+            print("📈 Processed stats for \(userStats.count) users")
             
             // Convert to leaderboard entries and sort
             var entries: [LeaderboardEntry] = []
@@ -520,15 +589,19 @@ class FirebaseManager: ObservableObject {
                 )
             }
             
+            print("🏅 Final leaderboard: \(entries.count) entries")
+            
             DispatchQueue.main.async {
                 self.leaderboardEntries = entries
                 self.isLoading = false
             }
             
         } catch {
+            print("❌ Leaderboard loading error: \(error)")
             DispatchQueue.main.async {
                 self.errorMessage = error.localizedDescription
                 self.isLoading = false
+                self.leaderboardEntries = []
             }
         }
     }
@@ -614,6 +687,29 @@ extension FirebaseManager {
                 self.isAuthenticated = false
                 self.currentUser = nil
             }
+        }
+    }
+    
+    // MARK: - Manual Profile Refresh
+    func refreshUserProfile() async {
+        print("🔄 Manual profile refresh requested")
+        guard let userId = currentUser?.id else {
+            print("❌ No current user to refresh")
+            return
+        }
+        
+        do {
+            let userDoc = try await db.collection("users").document(userId).getDocument()
+            if let updatedUser = try? userDoc.data(as: PurgoUser.self) {
+                DispatchQueue.main.async {
+                    self.currentUser = updatedUser
+                    print("✅ Profile refreshed: \(updatedUser.totalSessions) sessions")
+                }
+            } else {
+                print("❌ Failed to parse user data during refresh")
+            }
+        } catch {
+            print("❌ Error refreshing profile: \(error)")
         }
     }
 } 

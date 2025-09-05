@@ -233,7 +233,15 @@ class SessionManager: ObservableObject {
         
         // Sync with Firebase (creates collections automatically)
         Task {
-            await firebaseManager?.updateUserStats(with: session)
+            print("🔄 Starting Firebase sync for session: \(session.sessionType.rawValue), duration: \(Int(session.actualDuration))s")
+            if firebaseManager == nil {
+                print("❌ FirebaseManager is nil - cannot sync session")
+            } else if firebaseManager?.currentUser == nil {
+                print("❌ No current user - cannot sync session")
+            } else {
+                print("✅ FirebaseManager and user available, syncing...")
+                await firebaseManager?.updateUserStats(with: session)
+            }
         }
         
         // Stop timer and Live Activity

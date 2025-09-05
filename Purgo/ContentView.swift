@@ -14,6 +14,8 @@ struct ContentView: View {
     @State private var animateSauna = false
     @State private var animateCold = false
     @State private var selectedTab: AppTab = .timer
+    @State private var showingEncouragementPopup = false
+    @State private var currentEncouragementMessage = ""
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -23,7 +25,9 @@ struct ContentView: View {
                 liveActivityManager: liveActivityManager,
                 firebaseManager: firebaseManager,
                 animateSauna: $animateSauna,
-                animateCold: $animateCold
+                animateCold: $animateCold,
+                showingEncouragementPopup: $showingEncouragementPopup,
+                currentEncouragementMessage: $currentEncouragementMessage
             )
             .tag(AppTab.timer)
             
@@ -88,6 +92,9 @@ struct TimerPageView: View {
     @ObservedObject var firebaseManager: FirebaseManager
     @Binding var animateSauna: Bool
     @Binding var animateCold: Bool
+    @Binding var showingEncouragementPopup: Bool
+    @Binding var currentEncouragementMessage: String
+    @State private var triggeredMilestones: Set<Int> = []
     
     var body: some View {
         GeometryReader { geometry in
@@ -243,10 +250,188 @@ struct TimerPageView: View {
                 }
                 .padding(.horizontal, 40)
                 .padding(.bottom, 120) // Increased bottom padding to prevent overlap with custom tab bar
+                
+                // Encouragement popup overlay
+                if showingEncouragementPopup {
+                    EncouragementPopupView(
+                        message: currentEncouragementMessage,
+                        sessionType: sessionManager.sessionType,
+                        isShowing: $showingEncouragementPopup
+                    )
+                    .zIndex(1000)
+                }
             }
         }
         .animation(.spring(response: 0.8, dampingFraction: 0.8), value: sessionManager.isRunning)
         .animation(.spring(response: 0.8, dampingFraction: 0.8), value: sessionManager.isPaused)
+        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
+            if sessionManager.isRunning && !sessionManager.isPaused {
+                checkForEncouragementTriggers(timeElapsed: sessionManager.timeElapsed)
+            }
+        }
+        .onChange(of: sessionManager.isRunning) { isRunning in
+            if isRunning {
+                // Reset triggered milestones when a new session starts
+                triggeredMilestones.removeAll()
+            }
+        }
+    }
+    
+    // MARK: - Encouragement Logic
+    private func checkForEncouragementTriggers(timeElapsed: TimeInterval) {
+        guard sessionManager.isRunning && !sessionManager.isPaused && !showingEncouragementPopup else { return }
+        
+        let minutes = Int(timeElapsed) / 60
+        let seconds = Int(timeElapsed) % 60
+        
+        // Only trigger on exact minute marks (when seconds == 0) and haven't already triggered this milestone
+        guard seconds == 0 && !triggeredMilestones.contains(minutes) else { return }
+        
+        let sessionType = sessionManager.sessionType ?? .sauna
+        var message: String?
+        
+        switch minutes {
+        case 5:
+            message = getEncouragementMessage(for: sessionType, milestone: .fiveMinutes)
+        case 10:
+            message = getEncouragementMessage(for: sessionType, milestone: .tenMinutes)
+        case 15:
+            message = getEncouragementMessage(for: sessionType, milestone: .fifteenMinutes)
+        case 20:
+            message = getEncouragementMessage(for: sessionType, milestone: .twentyMinutes)
+        default:
+            break
+        }
+        
+        if let encouragementMessage = message {
+            triggeredMilestones.insert(minutes)
+            showEncouragementPopup(message: encouragementMessage)
+        }
+    }
+    
+    private func showEncouragementPopup(message: String) {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            currentEncouragementMessage = message
+            showingEncouragementPopup = true
+        }
+        
+        // Auto-dismiss after 4 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            withAnimation(.easeOut(duration: 0.5)) {
+                showingEncouragementPopup = false
+            }
+        }
+    }
+    
+    private func getEncouragementMessage(for sessionType: SessionType, milestone: EncouragementMilestone) -> String {
+        switch sessionType {
+        case .sauna:
+            return getSaunaEncouragementMessage(for: milestone)
+        case .cold:
+            return getColdEncouragementMessage(for: milestone)
+        }
+    }
+    
+    private func getSaunaEncouragementMessage(for milestone: EncouragementMilestone) -> String {
+        switch milestone {
+        case .fiveMinutes:
+            return "🌡️ Great start! You've already boosted circulation and lowered stress hormones — keep going for muscle relaxation!"
+        case .tenMinutes:
+            return "🔥 Nice work! You've burned about 30 calories and improved circulation. Stay longer for deeper detox and cardiovascular benefits."
+        case .fifteenMinutes:
+            return "💪 Excellent! Heart rate is up, sweating is at its peak. You're burning up to 60 calories and unlocking recovery mode."
+        case .twentyMinutes:
+            return "🏆 Amazing! You've activated heat shock proteins for cellular repair and long-term health resilience. Maximum benefits achieved!"
+        }
+    }
+    
+    private func getColdEncouragementMessage(for milestone: EncouragementMilestone) -> String {
+        switch milestone {
+        case .fiveMinutes:
+            return "🧊 Incredible willpower! You've triggered norepinephrine release and boosted mental resilience — push through for more benefits!"
+        case .tenMinutes:
+            return "❄️ Outstanding! You've activated brown fat burning and improved cold tolerance. Keep going for maximum metabolic boost!"
+        case .fifteenMinutes:
+            return "🌊 Phenomenal! You're maximizing dopamine release and building serious mental toughness. Elite-level cold exposure!"
+        case .twentyMinutes:
+            return "⚡ Legendary! You've achieved peak cold adaptation benefits. Your metabolism and mental strength are through the roof!"
+        }
+    }
+}
+
+// MARK: - Encouragement System
+enum EncouragementMilestone {
+    case fiveMinutes
+    case tenMinutes
+    case fifteenMinutes
+    case twentyMinutes
+}
+
+struct EncouragementPopupView: View {
+    let message: String
+    let sessionType: SessionType?
+    @Binding var isShowing: Bool
+    @State private var animateIn = false
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            VStack(spacing: 12) {
+                // Icon based on session type
+                Image(systemName: sessionType == .sauna ? "flame.fill" : "snowflake")
+                    .font(.title)
+                    .foregroundColor(sessionType == .sauna ? .orange : .cyan)
+                    .scaleEffect(animateIn ? 1.2 : 0.8)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.2), value: animateIn)
+                
+                Text(message)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .padding(.horizontal, 8)
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 24)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.black.opacity(0.9))
+                    .stroke(
+                        LinearGradient(
+                            colors: sessionType == .sauna ? 
+                                [.orange.opacity(0.6), .red.opacity(0.4)] :
+                                [.cyan.opacity(0.6), .blue.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+                    .shadow(
+                        color: sessionType == .sauna ? .orange.opacity(0.3) : .cyan.opacity(0.3),
+                        radius: 15,
+                        x: 0,
+                        y: 5
+                    )
+            )
+            .scaleEffect(animateIn ? 1.0 : 0.7)
+            .opacity(animateIn ? 1.0 : 0.0)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: animateIn)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 40)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                animateIn = true
+            }
+        }
+        .onTapGesture {
+            withAnimation(.easeOut(duration: 0.3)) {
+                isShowing = false
+            }
+        }
     }
 }
 
@@ -706,6 +891,7 @@ struct PulsingGlowModifier: ViewModifier {
 
 struct FireEmbersView: View {
     @State private var embers: [EmberParticle] = []
+    @State private var viewSize: CGSize = .zero
     
     var body: some View {
         GeometryReader { geometry in
@@ -726,9 +912,13 @@ struct FireEmbersView: View {
                         .blur(radius: ember.blur)
                 }
             }
-        }
-        .onAppear {
-            startEmberAnimation()
+            .onAppear {
+                viewSize = geometry.size
+                startEmberAnimation()
+            }
+            .onChange(of: geometry.size) { newSize in
+                viewSize = newSize
+            }
         }
     }
     
@@ -739,7 +929,10 @@ struct FireEmbersView: View {
     }
     
     private func addEmber() {
-        let newEmber = EmberParticle()
+        // Use actual view center for proper positioning
+        let centerX = viewSize.width / 2
+        let centerY = viewSize.height / 2
+        let newEmber = EmberParticle(centerX: centerX, centerY: centerY)
         embers.append(newEmber)
         
         withAnimation(.easeOut(duration: 3.0)) {
@@ -759,6 +952,7 @@ struct FireEmbersView: View {
 
 struct SnowflakesView: View {
     @State private var snowflakes: [SnowflakeParticle] = []
+    @State private var viewSize: CGSize = .zero
     
     var body: some View {
         GeometryReader { geometry in
@@ -772,9 +966,13 @@ struct SnowflakesView: View {
                         .rotationEffect(.degrees(snowflake.rotation))
                 }
             }
-        }
-        .onAppear {
-            startSnowflakeAnimation()
+            .onAppear {
+                viewSize = geometry.size
+                startSnowflakeAnimation()
+            }
+            .onChange(of: geometry.size) { newSize in
+                viewSize = newSize
+            }
         }
     }
     
@@ -785,7 +983,10 @@ struct SnowflakesView: View {
     }
     
     private func addSnowflake() {
-        let newSnowflake = SnowflakeParticle()
+        // Use actual view center for proper positioning
+        let centerX = viewSize.width / 2
+        let centerY = viewSize.height / 2
+        let newSnowflake = SnowflakeParticle(centerX: centerX, centerY: centerY)
         snowflakes.append(newSnowflake)
         
         withAnimation(.linear(duration: 5.0)) {
@@ -805,18 +1006,34 @@ struct SnowflakesView: View {
 
 struct EmberParticle: Identifiable {
     let id = UUID()
-    var position = CGPoint(x: Double.random(in: 30...90), y: 120)
+    var position: CGPoint
     var size = Double.random(in: 3...8)
     var opacity = Double.random(in: 0.6...1.0)
     var blur = Double.random(in: 0...2)
+    
+    init(centerX: Double, centerY: Double) {
+        // Start embers near the center of the icon with some random spread
+        self.position = CGPoint(
+            x: centerX + Double.random(in: -20...20),
+            y: centerY + Double.random(in: -10...10)
+        )
+    }
 }
 
 struct SnowflakeParticle: Identifiable {
     let id = UUID()
-    var position = CGPoint(x: Double.random(in: 20...100), y: 20) // Start higher up
+    var position: CGPoint
     var size = Double.random(in: 8...16)
     var opacity = Double.random(in: 0.5...0.9)
     var rotation = Double.random(in: 0...360)
+    
+    init(centerX: Double, centerY: Double) {
+        // Start snowflakes near the center with some random spread
+        self.position = CGPoint(
+            x: centerX + Double.random(in: -30...30),
+            y: centerY + Double.random(in: -20...0) // Start slightly above center
+        )
+    }
 }
 
 
@@ -1373,20 +1590,40 @@ struct ProfileView: View {
                                 .foregroundColor(.white.opacity(0.7))
                         }
                         
-                        // Sign out button
-                        Button("Sign Out") {
-                            firebaseManager.signOut()
+                        // Action buttons
+                        HStack(spacing: 12) {
+                            // Refresh button
+                            Button("Refresh Stats") {
+                                Task {
+                                    await firebaseManager.refreshUserProfile()
+                                }
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.blue.opacity(0.2))
+                                    .stroke(Color.blue.opacity(0.4), lineWidth: 1)
+                            )
+                            
+                            // Sign out button
+                            Button("Sign Out") {
+                                firebaseManager.signOut()
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.red.opacity(0.2))
+                                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                            )
                         }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white.opacity(0.8))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.red.opacity(0.2))
-                                .stroke(Color.red.opacity(0.4), lineWidth: 1)
-                        )
                     }
                     
                     // Enhanced stats grid with better visual hierarchy
@@ -1955,12 +2192,40 @@ struct FitnessStyleLeaderboardView: View {
                 }
                 
                 // Leaderboard list
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(firebaseManager.leaderboardEntries.enumerated()), id: \.element.id) { index, entry in
-                        FitnessStyleLeaderboardRow(entry: entry, rank: index + 1)
+                if firebaseManager.isLoading {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Text("Loading leaderboard...")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
                     }
+                    .padding(.top, 40)
+                } else if firebaseManager.leaderboardEntries.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "trophy")
+                            .font(.system(size: 50, weight: .light))
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        Text("No Sessions Yet")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        
+                        Text("Complete a session to appear on the leaderboard!")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 40)
+                } else {
+                    LazyVStack(spacing: 12) {
+                        ForEach(Array(firebaseManager.leaderboardEntries.enumerated()), id: \.element.id) { index, entry in
+                            FitnessStyleLeaderboardRow(entry: entry, rank: index + 1)
+                        }
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
         }
         .onAppear {
@@ -2068,10 +2333,45 @@ struct FitnessStyleLeaderboardRow: View {
     }
 }
 
+// MARK: - All Badges View
+struct AllBadgesView: View {
+    @ObservedObject var sessionManager: SessionManager
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                    ForEach(allBadges, id: \.id) { badge in
+                        BadgeGridItem(badge: badge)
+                    }
+                }
+                .padding()
+            }
+            .background(Color.black.ignoresSafeArea())
+            .navigationTitle("All Badges")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.orange)
+                }
+            }
+        }
+    }
+    
+    private var allBadges: [Badge] {
+        Badge.allBadges(sessionManager: sessionManager)
+    }
+}
+
 // MARK: - Badges View (Achievement System)
 struct BadgesView: View {
     @ObservedObject var sessionManager: SessionManager
     @ObservedObject var firebaseManager: FirebaseManager
+    @State private var showingAllBadges = false
     
     var body: some View {
         ScrollView {
@@ -2101,7 +2401,9 @@ struct BadgesView: View {
                             Spacer()
                             
                             Button("See All") {
-                                // Show all badges
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    showingAllBadges = true
+                                }
                             }
                             .font(.subheadline)
                             .foregroundColor(.orange)
@@ -2160,6 +2462,9 @@ struct BadgesView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .padding(.bottom, 80) // Account for custom tab bar
+        .sheet(isPresented: $showingAllBadges) {
+            AllBadgesView(sessionManager: sessionManager)
+        }
     }
     
     // Badge logic
@@ -2242,7 +2547,7 @@ struct Badge: Identifiable {
             Badge(title: "Getting Started", description: "Complete 5 sessions", icon: "5.circle.fill", color: .blue, requirement: .sessionsCompleted(5), isUnlocked: sessionManager.totalSessions >= 5),
             Badge(title: "Committed", description: "Complete 25 sessions", icon: "25.circle.fill", color: .purple, requirement: .sessionsCompleted(25), isUnlocked: sessionManager.totalSessions >= 25),
             Badge(title: "Dedicated", description: "Complete 50 sessions", icon: "50.circle.fill", color: .orange, requirement: .sessionsCompleted(50), isUnlocked: sessionManager.totalSessions >= 50),
-            Badge(title: "Master", description: "Complete 100 sessions", icon: "100.circle.fill", color: .red, requirement: .sessionsCompleted(100), isUnlocked: sessionManager.totalSessions >= 100),
+            Badge(title: "Master", description: "Complete 100 sessions", icon: "star.circle.fill", color: .red, requirement: .sessionsCompleted(100), isUnlocked: sessionManager.totalSessions >= 100),
             
             // Time-based badges
             Badge(title: "Hour Power", description: "Spend 1 hour total in sessions", icon: "clock.fill", color: .cyan, requirement: .timeSpent(3600), isUnlocked: sessionManager.totalTimeSpent >= 3600),
@@ -2312,27 +2617,56 @@ struct BadgeGridItem: View {
     let badge: Badge
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: badge.icon)
-                .font(.largeTitle)
-                .foregroundColor(badge.color)
+        VStack(spacing: 12) {
+            ZStack {
+                // Badge background with consistent size
+                RoundedRectangle(cornerRadius: 15)
+                    .fill(
+                        LinearGradient(
+                            colors: badge.isUnlocked ? 
+                                [badge.color.opacity(0.8), badge.color.opacity(0.6)] :
+                                [Color.gray.opacity(0.3), Color.gray.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(badge.isUnlocked ? badge.color.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 1.5)
+                    )
+                
+                Image(systemName: badge.icon)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(badge.isUnlocked ? .white : .gray.opacity(0.6))
+            }
             
-            Text(badge.title)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
-            Text(badge.description)
-                .font(.caption)
-                .foregroundColor(.white.opacity(0.7))
+            VStack(spacing: 4) {
+                Text(badge.title)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(badge.isUnlocked ? .white : .gray.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                
+                Text(badge.description)
+                    .font(.caption2)
+                    .foregroundColor(badge.isUnlocked ? .white.opacity(0.7) : .gray.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding()
+        .frame(height: 120) // Fixed height for consistency
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 15)
-                .fill(badge.color.opacity(0.05))
-                .stroke(badge.color.opacity(0.1), lineWidth: 1)
+                .fill(badge.isUnlocked ? badge.color.opacity(0.05) : Color.gray.opacity(0.02))
+                .stroke(badge.isUnlocked ? badge.color.opacity(0.1) : Color.gray.opacity(0.05), lineWidth: 1)
         )
+        .opacity(badge.isUnlocked ? 1.0 : 0.6)
     }
 }
 
