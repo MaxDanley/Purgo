@@ -181,6 +181,8 @@ struct FriendsListView: View {
     @State private var searchText = ""
     @State private var searchResults: [PurgoUser] = []
     @State private var isSearching = false
+    @State private var selectedFriend: PurgoUser?
+    @State private var showingFriendProfile = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -310,7 +312,13 @@ struct FriendsListView: View {
                             } else {
                                 LazyVStack(spacing: 8) {
                                     ForEach(firebaseManager.friends) { user in
-                                        FriendRow(user: user)
+                                        FriendRow(user: user, firebaseManager: firebaseManager) {
+                                            print("🟡 FriendsListView: FriendRow tapped for user: \(user.username)")
+                                            print("🟡 FriendsListView: Setting selectedFriend to: \(user.username)")
+                                            selectedFriend = user
+                                            print("🟡 FriendsListView: Setting showingFriendProfile to true")
+                                            showingFriendProfile = true
+                                        }
                                     }
                                 }
                             }
@@ -325,6 +333,27 @@ struct FriendsListView: View {
             Task {
                 await firebaseManager.loadFriends()
                 await firebaseManager.loadPendingRequests()
+            }
+        }
+        .sheet(isPresented: $showingFriendProfile) {
+            if let friend = selectedFriend {
+                FriendProfileView(friend: friend, firebaseManager: firebaseManager)
+                    .onAppear {
+                        print("🟡 FriendsListView: Sheet presenting for friend: \(friend.username)")
+                    }
+            } else {
+                Text("Error: No friend selected")
+                    .foregroundColor(.white)
+                    .background(Color.black)
+                    .onAppear {
+                        print("🔴 FriendsListView: Sheet presenting but selectedFriend is nil!")
+                    }
+            }
+        }
+        .onChange(of: showingFriendProfile) { isPresented in
+            print("🟡 FriendsListView: showingFriendProfile changed to: \(isPresented)")
+            if isPresented {
+                print("🟡 FriendsListView: selectedFriend: \(selectedFriend?.username ?? "nil")")
             }
         }
     }
@@ -376,8 +405,11 @@ struct ProfileView: View {
                 isUpdating: $isUpdatingUsername,
                 onSave: {
                     Task {
-                        await firebaseManager.updateUsername(newUsername)
-                        showingUsernameEditor = false
+                        let success = await firebaseManager.updateUsername(newUsername)
+                        if success {
+                            showingUsernameEditor = false
+                        }
+                        // Error handling is done in FirebaseManager via errorMessage
                     }
                 }
             )
@@ -499,7 +531,8 @@ struct ProfileView: View {
                     .padding(.vertical, 20)
             } else {
                 VStack(spacing: 8) {
-                    let sessionsToShow = showAllSessions ? sessionManager.completedSessions : Array(sessionManager.completedSessions.prefix(3))
+                    let sortedSessions = sessionManager.completedSessions.sorted { $0.endTime > $1.endTime }
+                    let sessionsToShow = showAllSessions ? sortedSessions : Array(sortedSessions.prefix(3))
                     
                     ForEach(sessionsToShow, id: \.id) { session in
                         HStack {
@@ -983,8 +1016,14 @@ struct UserSearchRow: View {
 
 struct FriendRow: View {
     let user: PurgoUser
+    let firebaseManager: FirebaseManager
+    let onTap: () -> Void
     
     var body: some View {
+        Button(action: {
+            print("🟡 FriendRow: Button tapped for user: \(user.username)")
+            onTap()
+        }) {
         HStack(spacing: 12) {
             AsyncImage(url: URL(string: user.photoURL ?? "")) { image in
                 image
@@ -1033,6 +1072,8 @@ struct FriendRow: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white.opacity(0.05))
         )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -1137,56 +1178,162 @@ struct UsernameEditorView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Text("Change Username")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("New Username")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    
-                    TextField("Enter new username", text: $newUsername)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .disabled(isUpdating)
-                }
-                
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
                 Spacer()
-                
-                Button(action: onSave) {
-                    if isUpdating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Text("Save")
-                            .fontWeight(.semibold)
-                    }
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
                 }
-                .font(.headline)
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.white)
-                .cornerRadius(25)
-                .disabled(newUsername.isEmpty || newUsername == currentUsername || isUpdating)
-                .opacity((newUsername.isEmpty || newUsername == currentUsername || isUpdating) ? 0.6 : 1.0)
+                .disabled(isUpdating)
             }
-            .padding(20)
-            .background(Color.black.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header Section
+                    VStack(spacing: 16) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.white)
+                        
+                        Text("Change Username")
+                            .font(.system(size: 24, weight: .light, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        
+                        Text("Choose a unique username for your profile")
+                            .font(.system(size: 16, weight: .light, design: .monospaced))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
                     }
-                    .foregroundColor(.white)
-                    .disabled(isUpdating)
+                    .padding(.top, 20)
+                    
+                    // Current Username Display
+                    VStack(spacing: 8) {
+                        Text("Current Username")
+                            .font(.system(size: 14, weight: .light, design: .monospaced))
+                            .foregroundColor(.gray)
+                        
+                        Text(currentUsername)
+                            .font(.system(size: 18, weight: .light, design: .monospaced))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.white.opacity(0.1))
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                    }
+                    
+                    // New Username Input
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("New Username")
+                            .font(.system(size: 16, weight: .light, design: .monospaced))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        
+                        TextField("Enter new username", text: $newUsername)
+                            .font(.system(size: 16, weight: .light, design: .monospaced))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.1))
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .disabled(isUpdating)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                    }
+                    
+                    // Username Requirements
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Requirements")
+                            .font(.system(size: 14, weight: .light, design: .monospaced))
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            requirementRow("3-20 characters", isValid: newUsername.count >= 3 && newUsername.count <= 20)
+                            requirementRow("Letters, numbers, underscores only", isValid: isValidUsernameFormat(newUsername))
+                            requirementRow("Must be unique", isValid: newUsername != currentUsername && !newUsername.isEmpty)
+                        }
+                    }
+                    
+                    Spacer(minLength: 20)
+                    
+                    // Save Button
+                    Button(action: onSave) {
+                        HStack {
+                            if isUpdating {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                
+                                Text("Save Username")
+                                    .font(.system(size: 16, weight: .light, design: .monospaced))
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            LinearGradient(
+                                colors: isButtonEnabled ? [.orange, .red] : [.gray.opacity(0.3), .gray.opacity(0.2)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(25)
+                        .shadow(color: isButtonEnabled ? .orange.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+                    }
+                    .disabled(!isButtonEnabled)
+                    .opacity(isButtonEnabled ? 1.0 : 0.6)
+                    
+                    Spacer(minLength: 100)
                 }
+                .padding(.horizontal, 20)
             }
         }
+        .background(Color.black.ignoresSafeArea())
+    }
+    
+    private var isButtonEnabled: Bool {
+        return !newUsername.isEmpty && 
+               newUsername != currentUsername && 
+               !isUpdating &&
+               newUsername.count >= 3 && 
+               newUsername.count <= 20 &&
+               isValidUsernameFormat(newUsername)
+    }
+    
+    private func requirementRow(_ text: String, isValid: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isValid ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 12))
+                .foregroundColor(isValid ? .green : .gray)
+            
+            Text(text)
+                .font(.system(size: 12, weight: .light, design: .monospaced))
+                .foregroundColor(isValid ? .white : .gray)
+        }
+    }
+    
+    private func isValidUsernameFormat(_ username: String) -> Bool {
+        let regex = "^[a-zA-Z0-9_]+$"
+        return username.range(of: regex, options: .regularExpression) != nil
     }
 }
 
@@ -1283,6 +1430,201 @@ struct PendingSentRequestRow: View {
             await MainActor.run {
                 self.isLoading = false
             }
+        }
+    }
+}
+
+// MARK: - Friend Profile View
+struct FriendProfileView: View {
+    let friend: PurgoUser
+    @ObservedObject var firebaseManager: FirebaseManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingRemoveConfirmation = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Spacer()
+                Button(action: { 
+                    print("🔴 FriendProfileView: Close button tapped")
+                    dismiss() 
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding()
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Profile Header
+                    profileHeaderSection
+                        .onAppear {
+                            print("🟢 FriendProfileView: Profile header appeared")
+                        }
+                    
+                    // Stats Cards
+                    statsCardsSection
+                        .onAppear {
+                            print("🟢 FriendProfileView: Stats cards appeared")
+                        }
+                    
+                    // Remove Friend Button
+                    removeFriendSection
+                        .onAppear {
+                            print("🟢 FriendProfileView: Remove friend button appeared")
+                        }
+                    
+                    // Recent Sessions
+                    recentSessionsSection
+                        .onAppear {
+                            print("🟢 FriendProfileView: Recent sessions section appeared")
+                        }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 100)
+            }
+        }
+        .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            print("🟢 FriendProfileView: View appeared for friend: \(friend.username)")
+            print("🟢 FriendProfileView: Friend data - ID: \(friend.id), Email: \(friend.email)")
+            print("🟢 FriendProfileView: Friend stats - Sessions: \(friend.totalSessions), Time: \(friend.totalMinutes), Streak: \(friend.currentStreak)")
+            print("🟢 FriendProfileView: FirebaseManager current user: \(firebaseManager.currentUser?.username ?? "nil")")
+        }
+        .onDisappear {
+            print("🔴 FriendProfileView: View disappeared for friend: \(friend.username)")
+        }
+        .alert("Remove Friend", isPresented: $showingRemoveConfirmation) {
+            Button("Cancel", role: .cancel) { 
+                print("🔴 FriendProfileView: Remove friend cancelled")
+            }
+            Button("Remove", role: .destructive) {
+                print("🔴 FriendProfileView: Remove friend confirmed")
+                Task {
+                    await firebaseManager.removeFriend(friend.id)
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(friend.username) from your friends list?")
+        }
+    }
+    
+    @ViewBuilder
+    private var profileHeaderSection: some View {
+        VStack(spacing: 16) {
+            // Profile Image
+            AsyncImage(url: URL(string: friend.photoURL ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                    )
+            }
+            .frame(width: 100, height: 100)
+            .clipShape(Circle())
+            
+            VStack(spacing: 4) {
+                Text(friend.username)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var statsCardsSection: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+            EnhancedStatCard(
+                title: "Total Sessions",
+                value: "\(friend.totalSessions)",
+                icon: "flame.fill",
+                color: .white
+            )
+            
+            EnhancedStatCard(
+                title: "Total Time",
+                value: formatDuration(friend.totalMinutes * 60),
+                icon: "clock.fill",
+                color: .blue
+            )
+            
+            EnhancedStatCard(
+                title: "Current Streak",
+                value: "\(friend.currentStreak)",
+                icon: "calendar.badge.checkmark",
+                color: .green
+            )
+            
+            EnhancedStatCard(
+                title: "Best Streak",
+                value: "\(friend.longestStreak)",
+                icon: "trophy.fill",
+                color: .yellow
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var removeFriendSection: some View {
+        Button(action: {
+            showingRemoveConfirmation = true
+        }) {
+            HStack {
+                Image(systemName: "person.badge.minus")
+                    .font(.system(size: 16, weight: .semibold))
+                
+                Text("Remove Friend")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.red.opacity(0.1))
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var recentSessionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent Sessions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Text("Session history not available")
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+        }
+    }
+    
+    private func formatDuration(_ seconds: Int) -> String {
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
         }
     }
 }

@@ -451,7 +451,7 @@ struct StatsView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            .padding(.bottom, 40)
+            .padding(.bottom, 100) // Extra padding for bottom tabs
         }
     }
     

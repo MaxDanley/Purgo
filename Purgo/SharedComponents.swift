@@ -227,11 +227,13 @@ struct GoalSelectionView: View {
     @ObservedObject var sessionManager: SessionManager
     @State private var selectedGoal: SessionGoal?
     @State private var sessionTypeToStart: SessionType = .sauna
+    @State private var saunaTemperature: Double = 180 // Default 180°F
     
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
                 headerSection
+                temperatureSliderSection
                 goalsGridSection
                 startButtonSection
                 Spacer()
@@ -278,13 +280,47 @@ struct GoalSelectionView: View {
     }
     
     @ViewBuilder
+    private var temperatureSliderSection: some View {
+        if sessionTypeToStart == .sauna {
+            VStack(spacing: 10) {
+                Text("Sauna Temperature")
+                    .font(.system(size: 14, weight: .light, design: .monospaced))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                HStack {
+                    Text("160°F")
+                        .font(.system(size: 12, weight: .light, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.6))
+                    
+                    Slider(value: $saunaTemperature, in: 160...200, step: 5)
+                        .accentColor(.orange)
+                        .scaleEffect(0.9)
+                    
+                    Text("200°F")
+                        .font(.system(size: 12, weight: .light, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                
+                Text("\(Int(saunaTemperature))°F")
+                    .font(.system(size: 16, weight: .light, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.orange)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    @ViewBuilder
     private var goalsGridSection: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 15) {
             ForEach(SessionGoal.goals(for: sessionTypeToStart), id: \.duration) { goal in
                 GoalButton(
                     goal: goal,
                     isSelected: selectedGoal?.duration == goal.duration,
-                    isRecommended: goal.duration == sessionManager.suggestedNextGoal(for: sessionTypeToStart)?.duration
+                    isRecommended: goal.duration == sessionManager.suggestedNextGoal(for: sessionTypeToStart)?.duration,
+                    sessionType: sessionTypeToStart,
+                    saunaTemperature: saunaTemperature
                 ) {
                     selectedGoal = goal
                 }
@@ -321,6 +357,8 @@ struct GoalButton: View {
     let goal: SessionGoal
     let isSelected: Bool
     let isRecommended: Bool
+    let sessionType: SessionType
+    let saunaTemperature: Double
     let action: () -> Void
     
     var body: some View {
@@ -329,6 +367,7 @@ struct GoalButton: View {
                 recommendedBadge
                 goalTitle
                 goalDurationLabel
+                calorieEstimate
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
@@ -365,10 +404,38 @@ struct GoalButton: View {
             .foregroundColor(.white.opacity(0.6))
     }
     
+    @ViewBuilder
+    private var calorieEstimate: some View {
+        if sessionType == .sauna {
+            let calories = calculateCaloriesBurned()
+            Text("~\(Int(calories)) calories")
+                .font(.system(size: 12, weight: .light, design: .monospaced))
+                .foregroundColor(.white.opacity(0.8))
+        }
+    }
+    
     private func goalButtonBackground() -> some View {
         RoundedRectangle(cornerRadius: 15)
             .fill(isSelected ? Color.white.opacity(0.2) : Color.white.opacity(0.05))
             .stroke(isSelected ? Color.white.opacity(0.6) : Color.clear, lineWidth: 2)
+    }
+    
+    private func calculateCaloriesBurned() -> Double {
+        let durationMinutes = goal.duration / 60
+        
+        switch sessionType {
+        case .sauna:
+            // Sauna calorie burn: Base rate of 1.5 cal/min at 160°F, increases with temperature
+            // Temperature multiplier: 1.0 at 160°F, 1.5 at 200°F
+            let baseRate = 1.5 // calories per minute at 160°F
+            let temperatureMultiplier = 1.0 + ((saunaTemperature - 160) / 40) * 0.5
+            return durationMinutes * baseRate * temperatureMultiplier
+            
+        case .cold:
+            // Cold tub calorie burn: Higher rate due to thermogenesis
+            // Cold water triggers brown fat activation and increased metabolic rate
+            return durationMinutes * 2.5 // Higher burn rate for cold exposure
+        }
     }
 }
 

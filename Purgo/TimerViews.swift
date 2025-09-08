@@ -525,7 +525,7 @@ struct BigSessionButton: View {
                 
                 // Text content
                 Text(title)
-                    .font(.callout)
+                    .font(.system(size: 16, weight: .light, design: .monospaced))
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

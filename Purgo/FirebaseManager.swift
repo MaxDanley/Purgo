@@ -18,7 +18,7 @@ import AuthenticationServices
 import CryptoKit
 
 // MARK: - User Models
-struct PurgoUser: Codable, Identifiable {
+struct PurgoUser: Codable, Identifiable, Equatable {
     let id: String
     let email: String
     let displayName: String
@@ -78,13 +78,13 @@ struct PurgoUser: Codable, Identifiable {
     }
 }
 
-struct RecentSession: Codable {
+struct RecentSession: Codable, Equatable {
     let type: String
     let duration: Int
     let timestamp: Date
 }
 
-struct UserLocation: Codable {
+struct UserLocation: Codable, Equatable {
     let city: String
     let state: String
     let country: String
