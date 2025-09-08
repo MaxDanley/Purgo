@@ -459,22 +459,50 @@ class FirebaseManager: ObservableObject {
     
     private func createOrUpdateUser(_ firebaseUser: User) async {
         do {
-            let username = await generateUniqueUsername(from: firebaseUser.displayName ?? firebaseUser.email ?? "user")
+            // Check if user already exists
+            let document = try await db.collection("users").document(firebaseUser.uid).getDocument()
             
-            let user = PurgoUser(
-                id: firebaseUser.uid,
-                email: firebaseUser.email ?? "",
-                displayName: firebaseUser.displayName ?? "",
-                username: username,
-                photoURL: firebaseUser.photoURL?.absoluteString
-            )
-            
-            try await db.collection("users").document(firebaseUser.uid).setData(from: user)
-            
-            DispatchQueue.main.async {
-                self.currentUser = user
-                self.isAuthenticated = true
-                print("✅ New user created and authenticated")
+            if document.exists {
+                print("✅ User already exists, updating profile info only")
+                // User exists - only update basic profile info, preserve stats
+                let updateData: [String: Any] = [
+                    "email": firebaseUser.email ?? "",
+                    "displayName": firebaseUser.displayName ?? "",
+                    "photoURL": firebaseUser.photoURL?.absoluteString as Any,
+                    "lastActiveAt": Date()
+                ]
+                
+                try await db.collection("users").document(firebaseUser.uid).updateData(updateData)
+                
+                // Reload the user to get updated data
+                let updatedDoc = try await db.collection("users").document(firebaseUser.uid).getDocument()
+                if let updatedUser = try? updatedDoc.data(as: PurgoUser.self) {
+                    DispatchQueue.main.async {
+                        self.currentUser = updatedUser
+                        self.isAuthenticated = true
+                        print("✅ Existing user profile updated and authenticated")
+                        print("📊 Preserved stats: \(updatedUser.totalSessions) sessions, \(Int(updatedUser.totalTimeSpent/60)) minutes")
+                    }
+                }
+            } else {
+                print("🆕 Creating new user profile")
+                let username = await generateUniqueUsername(from: firebaseUser.displayName ?? firebaseUser.email ?? "user")
+                
+                let user = PurgoUser(
+                    id: firebaseUser.uid,
+                    email: firebaseUser.email ?? "",
+                    displayName: firebaseUser.displayName ?? "",
+                    username: username,
+                    photoURL: firebaseUser.photoURL?.absoluteString
+                )
+                
+                try await db.collection("users").document(firebaseUser.uid).setData(from: user)
+                
+                DispatchQueue.main.async {
+                    self.currentUser = user
+                    self.isAuthenticated = true
+                    print("✅ New user created and authenticated")
+                }
             }
             
             // Load friends list and pending requests

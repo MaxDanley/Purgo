@@ -33,7 +33,7 @@ struct ContentView: View {
             .tag(AppTab.timer)
             
             // Friends Tab
-            FriendsPageView(firebaseManager: firebaseManager, selectedTab: $friendsSelectedTab)
+            FriendsPageView(firebaseManager: firebaseManager, sessionManager: sessionManager, selectedTab: $friendsSelectedTab)
             .tag(AppTab.friends)
             
             // Sessions/Achievements Tab  

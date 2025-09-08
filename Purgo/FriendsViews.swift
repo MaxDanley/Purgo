@@ -13,46 +13,55 @@ import UIKit
 // MARK: - Friends Page View
 struct FriendsPageView: View {
     @ObservedObject var firebaseManager: FirebaseManager
+    @ObservedObject var sessionManager: SessionManager
     @Binding var selectedTab: FriendsTab
     @State private var selectedPeriod: LeaderboardPeriod = .weekly
     @State private var selectedScope: LeaderboardScope = .friends
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 16) {
-                Text("Connect & Compete")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Tab selector
-                HStack(spacing: 0) {
-                    ForEach(FriendsTab.allCases, id: \.self) { tab in
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedTab = tab
+            if firebaseManager.isAuthenticated {
+                // Authenticated user - show tabs and content
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(spacing: 16) {
+                        Text("Connect & Compete")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        // Tab selector
+                        HStack(spacing: 0) {
+                            ForEach(FriendsTab.allCases, id: \.self) { tab in
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        selectedTab = tab
+                                    }
+                                }) {
+                                    Text(tab.rawValue)
+                                        .font(.system(size: 16, weight: .light, design: .monospaced))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(selectedTab == tab ? .black : .gray)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(tabButtonBackground(isSelected: selectedTab == tab))
+                                }
                             }
-                        }) {
-                            Text(tab.rawValue)
-                                .font(.system(size: 16, weight: .light, design: .monospaced))
-                                .fontWeight(.semibold)
-                                .foregroundColor(selectedTab == tab ? .black : .gray)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(tabButtonBackground(isSelected: selectedTab == tab))
                         }
+                        .padding(4)
+                        .background(tabSelectorBackground())
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    
+                    // Content based on selected tab
+                    selectedTabContent
                 }
-                .padding(4)
-                .background(tabSelectorBackground())
+            } else {
+                // Not authenticated - show sign-in options
+                signInView
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            
-            // Content based on selected tab
-            selectedTabContent
         }
         .background(Color.black.ignoresSafeArea())
         .alert("Error", isPresented: .constant(firebaseManager.errorMessage != nil)) {
@@ -75,6 +84,85 @@ struct FriendsPageView: View {
     }
     
     @ViewBuilder
+    private var signInView: some View {
+        VStack(spacing: 40) {
+            Spacer()
+            
+            // Header
+            VStack(spacing: 16) {
+                Text("Connect & Compete")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("Sign in to connect with friends, track your progress, and compete on leaderboards")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer()
+            
+            // Sign-in buttons
+            VStack(spacing: 16) {
+                // Google Sign-In Button
+                Button(action: {
+                    Task {
+                        await firebaseManager.signInWithGoogle()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Text("Sign in with Google")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.red)
+                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                
+                // Apple Sign-In Button
+                Button(action: {
+                    Task {
+                        await firebaseManager.signInWithApple()
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "applelogo")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Text("Sign in with Apple")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.black)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+                }
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer()
+        }
+    }
+    
+    @ViewBuilder
     private var selectedTabContent: some View {
         switch selectedTab {
         case .friends:
@@ -82,7 +170,7 @@ struct FriendsPageView: View {
         case .leaderboard:
             FitnessStyleLeaderboardView(firebaseManager: firebaseManager, selectedPeriod: $selectedPeriod, selectedScope: $selectedScope)
         case .profile:
-            ProfileView(firebaseManager: firebaseManager)
+            ProfileView(firebaseManager: firebaseManager, sessionManager: sessionManager)
         }
     }
 }
@@ -250,11 +338,13 @@ struct FriendsListView: View {
 // MARK: - Profile View
 struct ProfileView: View {
     @ObservedObject var firebaseManager: FirebaseManager
+    @ObservedObject var sessionManager: SessionManager
     @State private var showingUsernameEditor = false
     @State private var newUsername = ""
     @State private var isUpdatingUsername = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isUpdatingProfilePicture = false
+    @State private var showAllSessions = false
     
     var body: some View {
         ScrollView {
@@ -263,13 +353,22 @@ struct ProfileView: View {
                     profileHeaderSection(user: user)
                     statsCardsSection(user: user)
                     recentSessionsSection(user: user)
+                    signOutSection()
                 } else {
                     noUserView
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 100) // Extra padding for bottom tabs
         }
         .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            // Refresh user profile data when view appears
+            Task {
+                await firebaseManager.refreshUserProfile()
+            }
+        }
         .sheet(isPresented: $showingUsernameEditor) {
             UsernameEditorView(
                 currentUsername: firebaseManager.currentUser?.username ?? "",
@@ -393,29 +492,31 @@ struct ProfileView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if user.recentSessions.isEmpty {
+            if sessionManager.completedSessions.isEmpty {
                 Text("No recent sessions")
                     .foregroundColor(.gray)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
             } else {
                 VStack(spacing: 8) {
-                    ForEach(user.recentSessions.prefix(5), id: \.timestamp) { session in
+                    let sessionsToShow = showAllSessions ? sessionManager.completedSessions : Array(sessionManager.completedSessions.prefix(3))
+                    
+                    ForEach(sessionsToShow, id: \.id) { session in
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(session.type == "sauna" ? "Sauna Session" : "Cold Tub Session")
+                                Text(session.sessionType == .sauna ? "Sauna Session" : "Cold Tub Session")
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(.white)
 
-                                Text("\(session.duration) minutes")
+                                Text("\(Int(session.actualDuration / 60)) minutes")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
 
                             Spacer()
 
-                            Text(session.timestamp, style: .date)
+                            Text(session.endTime, style: .date)
                                 .font(.caption)
                                 .foregroundColor(.gray.opacity(0.8))
                         }
@@ -426,11 +527,58 @@ struct ProfileView: View {
                                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
                         )
                     }
+                    
+                    // Show All button if there are more than 3 sessions
+                    if sessionManager.completedSessions.count > 3 {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showAllSessions.toggle()
+                            }
+                        }) {
+                            Text(showAllSessions ? "Show Less" : "Show All (\(sessionManager.completedSessions.count))")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.white.opacity(0.1))
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        }
+                        .padding(.top, 8)
+                    }
                 }
             }
         }
     }
-
+    
+    @ViewBuilder
+    private func signOutSection() -> some View {
+        VStack(spacing: 12) {
+            Button(action: {
+                firebaseManager.signOut()
+            }) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
+                    
+                    Text("Sign Out")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.red.opacity(0.1))
+                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                )
+            }
+        }
+    }
+    
     @ViewBuilder
     private var noUserView: some View {
         Text("Please sign in to view your profile")
@@ -574,7 +722,7 @@ struct FitnessStyleLeaderboardView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(Array(firebaseManager.leaderboardEntries.enumerated()), id: \.element.id) { index, entry in
-                            FitnessStyleLeaderboardRow(entry: entry, rank: entry.rank)
+                            FitnessStyleLeaderboardRow(entry: entry, rank: entry.rank, firebaseManager: firebaseManager)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -584,6 +732,10 @@ struct FitnessStyleLeaderboardView: View {
             Spacer()
         }
         .onAppear {
+            loadLeaderboard()
+        }
+        .onChange(of: firebaseManager.currentUser) { _ in
+            // Reload leaderboard when user data changes
             loadLeaderboard()
         }
     }
@@ -599,6 +751,16 @@ struct FitnessStyleLeaderboardView: View {
 struct FitnessStyleLeaderboardRow: View {
     let entry: LeaderboardEntry
     let rank: Int
+    @ObservedObject var firebaseManager: FirebaseManager
+    
+    private var profileImageURL: String {
+        // If this is the current user, use their current profile picture from FirebaseManager
+        if entry.userId == firebaseManager.currentUser?.id {
+            return firebaseManager.currentUser?.photoURL ?? ""
+        }
+        // Otherwise use the entry's photoURL
+        return entry.photoURL ?? ""
+    }
     
     var body: some View {
         HStack(spacing: 16) {
@@ -616,7 +778,7 @@ struct FitnessStyleLeaderboardRow: View {
             
             // User info
             HStack(spacing: 12) {
-                AsyncImage(url: URL(string: entry.photoURL ?? "")) { image in
+                AsyncImage(url: URL(string: profileImageURL)) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -627,7 +789,7 @@ struct FitnessStyleLeaderboardRow: View {
                 .clipShape(Circle())
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.displayName)
+                    Text(entry.userId == firebaseManager.currentUser?.id ? "Me" : entry.displayName)
                         .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
@@ -929,7 +1091,7 @@ struct FriendRequestRow: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 12)
+                    .frame(width: 60) // Fixed width
                     .padding(.vertical, 6)
                     .background(Color.green)
                     .cornerRadius(15)
@@ -947,7 +1109,7 @@ struct FriendRequestRow: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 12)
+                    .frame(width: 60) // Fixed width
                     .padding(.vertical, 6)
                     .background(Color.red)
                     .cornerRadius(15)
@@ -1004,7 +1166,7 @@ struct UsernameEditorView: View {
                     }
                 }
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.black)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .background(Color.white)
