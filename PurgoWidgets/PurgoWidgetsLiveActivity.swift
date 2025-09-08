@@ -37,40 +37,35 @@ public struct PurgoTimerAttributes: ActivityAttributes {
 struct PurgoTimerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PurgoTimerAttributes.self) { context in
-            // Lock screen/banner UI
+            // Lock screen/banner UI - this should NOT appear in Dynamic Island
             PurgoTimerLiveActivityView(context: context)
                 .activitySystemActionForegroundColor(.white)
                 .activityBackgroundTint(.black.opacity(0.8))
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded UI goes here
+                // Minimal expanded region (required for generic parameter inference)
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack {
-                        Image(systemName: context.state.sessionType == "sauna" ? "flame.fill" : "snowflake")
-                            .foregroundColor(context.state.sessionType == "sauna" ? .orange : .blue)
-                        Text(context.attributes.sessionName)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
+                    EmptyView()
                 }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.startTime, style: .timer)
-                        .font(.system(.title3, design: .monospaced))
-                        .fontWeight(.semibold)
-                        .multilineTextAlignment(.trailing)
-                        .contentTransition(.numericText())
-                }
+                
             } compactLeading: {
-                Image(systemName: context.state.sessionType == "sauna" ? "flame.fill" : "snowflake")
-                    .foregroundColor(context.state.sessionType == "sauna" ? .orange : .blue)
+                // Small colored dot for session type
+                Circle()
+                    .fill(context.state.sessionType == "sauna" ? Color.orange : Color.cyan)
+                    .frame(width: 8, height: 8)
+                
             } compactTrailing: {
+                // Timer with seconds - compact format
                 Text(context.state.startTime, style: .timer)
-                    .font(.system(.caption2, design: .monospaced))
-                    .fontWeight(.medium)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(context.state.sessionType == "sauna" ? .orange : .cyan)
                     .contentTransition(.numericText())
+                
             } minimal: {
-                Image(systemName: context.state.sessionType == "sauna" ? "flame.fill" : "snowflake")
-                    .foregroundColor(context.state.sessionType == "sauna" ? .orange : .blue)
+                // Single small dot
+                Circle()
+                    .fill(context.state.sessionType == "sauna" ? Color.orange : Color.cyan)
+                    .frame(width: 6, height: 6)
             }
         }
     }
@@ -88,27 +83,28 @@ struct PurgoTimerLiveActivityView: View {
     let context: ActivityViewContext<PurgoTimerAttributes>
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Session icon
+        // This is for lock screen/banner notifications only - NOT Dynamic Island
+        HStack(spacing: 12) {
+            // Session icon - smaller for banner
             ZStack {
                 Circle()
                     .fill(context.state.sessionType == "sauna" ? 
                           LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing) :
                           LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
                 
                 Image(systemName: context.state.sessionType == "sauna" ? "flame.fill" : "snowflake")
                     .foregroundColor(.white)
-                    .font(.title3)
+                    .font(.system(size: 16))
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.sessionName)
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.semibold)
                 
                 Text("Session in progress")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
             
@@ -116,8 +112,8 @@ struct PurgoTimerLiveActivityView: View {
             
             VStack(alignment: .trailing, spacing: 2) {
                 Text(context.state.startTime, style: .timer)
-                    .font(.system(.title2, design: .monospaced))
-                    .fontWeight(.bold)
+                    .font(.system(.headline, design: .monospaced))
+                    .fontWeight(.semibold)
                     .contentTransition(.numericText())
                 
                 Text("elapsed")
@@ -126,8 +122,8 @@ struct PurgoTimerLiveActivityView: View {
                     .textCase(.uppercase)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(Color(UIColor.systemBackground))
     }
     

@@ -1,6 +1,12 @@
 # Firebase Configuration
 GoogleService-Info.plist
 
+# Firebase Hosting
+.firebase/
+.firebaserc
+firebase.json
+public/
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore

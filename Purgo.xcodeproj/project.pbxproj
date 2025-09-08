@@ -15,6 +15,8 @@
 		3128498C2E680CF000554BD1 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498B2E680CF000554BD1 /* GoogleSignIn */; };
 		3128498E2E680CF000554BD1 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498D2E680CF000554BD1 /* GoogleSignInSwift */; };
 		312849902E680D5000554BD1 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 3128498F2E680D5000554BD1 /* FirebaseFirestore */; };
+		312849922E6E2D7700554BD1 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 312849912E6E2D7700554BD1 /* FirebaseStorage */; };
+		312849942E6E339000554BD1 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 312849932E6E339000554BD1 /* FirebaseMessaging */; };
 		31DED1CA2E600E8D001DBBB9 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 31DED1C92E600E8D001DBBB9 /* WidgetKit.framework */; };
 		31DED1CC2E600E8D001DBBB9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 31DED1CB2E600E8D001DBBB9 /* SwiftUI.framework */; };
 		31DED1DD2E600E8E001DBBB9 /* PurgoWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 31DED1C72E600E8D001DBBB9 /* PurgoWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -119,11 +121,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				312849942E6E339000554BD1 /* FirebaseMessaging in Frameworks */,
 				3128498C2E680CF000554BD1 /* GoogleSignIn in Frameworks */,
 				312849882E680C5400554BD1 /* FirebaseDatabase in Frameworks */,
 				312849842E680C5400554BD1 /* FirebaseAnalytics in Frameworks */,
 				3128498E2E680CF000554BD1 /* GoogleSignInSwift in Frameworks */,
 				3128498A2E680CDF00554BD1 /* FirebaseCore in Frameworks */,
+				312849922E6E2D7700554BD1 /* FirebaseStorage in Frameworks */,
 				312849862E680C5400554BD1 /* FirebaseAuth in Frameworks */,
 				312849902E680D5000554BD1 /* FirebaseFirestore in Frameworks */,
 			);
@@ -217,6 +221,8 @@
 				3128498B2E680CF000554BD1 /* GoogleSignIn */,
 				3128498D2E680CF000554BD1 /* GoogleSignInSwift */,
 				3128498F2E680D5000554BD1 /* FirebaseFirestore */,
+				312849912E6E2D7700554BD1 /* FirebaseStorage */,
+				312849932E6E339000554BD1 /* FirebaseMessaging */,
 			);
 			productName = Purgo;
 			productReference = 31DED1742E600661001DBBB9 /* Purgo.app */;
@@ -883,6 +889,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		312849912E6E2D7700554BD1 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		312849932E6E339000554BD1 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3128497F2E6806B200554BD1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
