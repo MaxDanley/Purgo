@@ -50,12 +50,9 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app uses tracking to provide personalized content and improve your experience. We may share your data with third-party partners for advertising purposes.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Purgo needs access to your contacts to help you find friends who are already using the app. We'll match your contacts with existing users to suggest connections and help you build your wellness community.</string>
 </dict>
 </plist>

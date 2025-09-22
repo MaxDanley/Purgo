@@ -297,6 +297,99 @@ class FirebaseManager: ObservableObject {
         }
     }
     
+    // MARK: - Account Deletion
+    @MainActor
+    func deleteAccount() async -> Bool {
+        print("🗑️ Starting account deletion process...")
+        
+        guard let user = auth.currentUser else {
+            print("❌ No authenticated user to delete")
+            errorMessage = "No authenticated user found"
+            return false
+        }
+        
+        do {
+            // Delete user data from Firestore
+            await deleteUserData(userId: user.uid)
+            
+            // Delete user from Firebase Auth
+            try await user.delete()
+            
+            // Sign out from Google if applicable
+            GIDSignIn.sharedInstance.signOut()
+            
+            // Clear local state
+            DispatchQueue.main.async {
+                self.currentUser = nil
+                self.isAuthenticated = false
+                self.friends = []
+                self.friendRequests = []
+            }
+            
+            print("✅ Account successfully deleted")
+            return true
+            
+        } catch {
+            print("❌ Account deletion error: \(error)")
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+    
+    private func deleteUserData(userId: String) async {
+        print("🗑️ Deleting user data for user: \(userId)")
+        
+        do {
+            // Delete user document
+            try await db.collection("users").document(userId).delete()
+            
+            // Delete user's friendships (both sent and received)
+            let friendshipsQuery = db.collection("friendships")
+                .whereField("userId", isEqualTo: userId)
+            let friendshipsSnapshot = try await friendshipsQuery.getDocuments()
+            
+            for document in friendshipsSnapshot.documents {
+                try await document.reference.delete()
+            }
+            
+            // Delete friendships where user is the friend
+            let friendOfQuery = db.collection("friendships")
+                .whereField("friendId", isEqualTo: userId)
+            let friendOfSnapshot = try await friendOfQuery.getDocuments()
+            
+            for document in friendOfSnapshot.documents {
+                try await document.reference.delete()
+            }
+            
+            // Delete user's sessions
+            let sessionsQuery = db.collection("sessions")
+                .whereField("userId", isEqualTo: userId)
+            let sessionsSnapshot = try await sessionsQuery.getDocuments()
+            
+            for document in sessionsSnapshot.documents {
+                try await document.reference.delete()
+            }
+            
+            // Delete user's profile image from Storage if it exists
+            let storageRef = storage.reference()
+            let profileImageRef = storageRef.child("profile_images/\(userId).jpg")
+            
+            do {
+                try await profileImageRef.delete()
+                print("✅ Deleted profile image from storage")
+            } catch {
+                // Profile image might not exist, which is fine
+                print("ℹ️ No profile image to delete: \(error)")
+            }
+            
+            print("✅ Successfully deleted all user data")
+            
+        } catch {
+            print("❌ Error deleting user data: \(error)")
+            // Don't throw here - we still want to delete the auth account even if some data deletion fails
+        }
+    }
+    
     // MARK: - Apple Sign-In
     @MainActor
     func signInWithApple() async {
@@ -387,6 +480,19 @@ class FirebaseManager: ObservableObject {
             print("📧 Firebase user email: \(authResult.user.email ?? "Private")")
             print("👤 Firebase user display name: \(authResult.user.displayName ?? "Unknown")")
             print("🆔 Firebase user ID: \(authResult.user.uid)")
+            
+            // Debug Apple Sign-In data
+            if let displayName = authResult.user.displayName {
+                print("🔍 Display name details: '\(displayName)' (length: \(displayName.count))")
+            } else {
+                print("🔍 Display name is nil - this is common with Apple Sign-In")
+            }
+            
+            if let email = authResult.user.email {
+                print("🔍 Email details: '\(email)' (length: \(email.count))")
+            } else {
+                print("🔍 Email is nil - this is common with Apple Sign-In")
+            }
             
             print("📝 Creating or updating user profile...")
             await createOrUpdateUser(authResult.user)
@@ -486,12 +592,26 @@ class FirebaseManager: ObservableObject {
                 }
             } else {
                 print("🆕 Creating new user profile")
-                let username = await generateUniqueUsername(from: firebaseUser.displayName ?? firebaseUser.email ?? "user")
+                
+                // Better handling for Apple Sign-In users who often have null displayName
+                let displayName = firebaseUser.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let email = firebaseUser.email?.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // Use displayName if available and meaningful, otherwise use email, otherwise generate random
+                let nameForUsername = if let displayName = displayName, !displayName.isEmpty, displayName.lowercased() != "private" {
+                    displayName
+                } else if let email = email, !email.isEmpty, email.lowercased() != "private" {
+                    email
+                } else {
+                    "user" // This will trigger random username generation
+                }
+                
+                let username = await generateUniqueUsername(from: nameForUsername)
                 
                 let user = PurgoUser(
                     id: firebaseUser.uid,
-                    email: firebaseUser.email ?? "",
-                    displayName: firebaseUser.displayName ?? "",
+                    email: email ?? "",
+                    displayName: displayName ?? "",
                     username: username,
                     photoURL: firebaseUser.photoURL?.absoluteString
                 )
@@ -503,6 +623,9 @@ class FirebaseManager: ObservableObject {
                     self.isAuthenticated = true
                     print("✅ New user created and authenticated")
                 }
+                
+                // Process any pending invite
+                await processPendingInvite()
             }
             
             // Load friends list and pending requests
@@ -516,12 +639,49 @@ class FirebaseManager: ObservableObject {
     }
     
     private func generateUniqueUsername(from name: String) async -> String {
-        let baseUsername = name.lowercased()
+        // Handle empty or generic names better
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // If the name is empty, too short, or generic, generate a random username
+        if cleanName.isEmpty || cleanName.count < 2 || 
+           cleanName.lowercased() == "user" || 
+           cleanName.lowercased() == "private" ||
+           cleanName.lowercased() == "unknown" {
+            return await generateRandomUsername()
+        }
+        
+        let baseUsername = cleanName.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .joined()
             .prefix(20)
         
+        // If after cleaning, the username is too short, generate random
+        if baseUsername.count < 3 {
+            return await generateRandomUsername()
+        }
+        
         var username = String(baseUsername)
+        var counter = 1
+        
+        while await isUsernameTaken(username) {
+            username = "\(baseUsername)\(counter)"
+            counter += 1
+        }
+        
+        return username
+    }
+    
+    private func generateRandomUsername() async -> String {
+        let adjectives = ["cool", "awesome", "great", "amazing", "fantastic", "super", "brilliant", "stellar", "epic", "legendary"]
+        let nouns = ["user", "sauna", "warrior", "champion", "hero", "master", "pro", "expert", "guru", "legend"]
+        
+        let randomAdjective = adjectives.randomElement() ?? "cool"
+        let randomNoun = nouns.randomElement() ?? "user"
+        let randomNumber = Int.random(in: 100...9999)
+        
+        let baseUsername = "\(randomAdjective)\(randomNoun)\(randomNumber)"
+        
+        var username = baseUsername
         var counter = 1
         
         while await isUsernameTaken(username) {
@@ -1474,6 +1634,40 @@ extension FirebaseManager {
         let usernameRegex = "^[a-z0-9_]{3,20}$"
         let usernamePredicate = NSPredicate(format: "SELF MATCHES %@", usernameRegex)
         return usernamePredicate.evaluate(with: username)
+    }
+    
+    // MARK: - Invite Processing
+    private func processPendingInvite() async {
+        guard let inviteCode = UserDefaults.standard.string(forKey: "pendingInviteCode"),
+              let inviterId = UserDefaults.standard.string(forKey: "pendingInviterId"),
+              let currentUserId = currentUser?.id else {
+            return
+        }
+        
+        do {
+            // Send friend request to inviter
+            let friendRequest: [String: Any] = [
+                "userId": currentUserId,
+                "friendId": inviterId,
+                "status": "pending",
+                "createdAt": Date(),
+                "type": "friend_request",
+                "source": "invite",
+                "inviteCode": inviteCode
+            ]
+            
+            try await db.collection("friendships").addDocument(data: friendRequest)
+            
+            // Clear pending invite data
+            UserDefaults.standard.removeObject(forKey: "pendingInviteCode")
+            UserDefaults.standard.removeObject(forKey: "pendingInviterId")
+            UserDefaults.standard.removeObject(forKey: "pendingInviterName")
+            
+            print("✅ Pending invite processed successfully")
+            
+        } catch {
+            print("❌ Error processing pending invite: \(error)")
+        }
     }
     
     // MARK: - Profile Picture Management

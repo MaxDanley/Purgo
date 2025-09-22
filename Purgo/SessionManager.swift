@@ -195,7 +195,8 @@ class SessionManager: ObservableObject {
     
     private var displayTimer: Timer?
     private var liveActivityManager: LiveActivityManager?
-    private var firebaseManager: FirebaseManager?
+    var firebaseManager: FirebaseManager?
+    private var watchConnectivityManager: WatchConnectivityManager?
     
     init() {
         loadSessions()
@@ -241,6 +242,10 @@ class SessionManager: ObservableObject {
         self.firebaseManager = manager
     }
     
+    func setWatchConnectivityManager(_ manager: WatchConnectivityManager) {
+        self.watchConnectivityManager = manager
+    }
+    
     func selectGoalAndStart(_ goal: SessionGoal, type: SessionType) {
         selectedGoal = goal
         showingGoalSelection = false
@@ -260,6 +265,9 @@ class SessionManager: ObservableObject {
         
         // Start Live Activity
         liveActivityManager?.startLiveActivity(for: type)
+        
+        // Send session update to watch
+        watchConnectivityManager?.sendSessionUpdateToWatch()
         
         // Notify mutual friends (creates notifications collection automatically)
         Task {
@@ -302,6 +310,9 @@ class SessionManager: ObservableObject {
         
         // Pause Live Activity
         liveActivityManager?.endLiveActivity()
+        
+        // Send session update to watch
+        watchConnectivityManager?.sendSessionUpdateToWatch()
     }
     
     func resumeSession() {
@@ -328,6 +339,9 @@ class SessionManager: ObservableObject {
         if let timer = displayTimer {
             RunLoop.main.add(timer, forMode: .common)
         }
+        
+        // Send session update to watch
+        watchConnectivityManager?.sendSessionUpdateToWatch()
     }
     
     func endSession() {
@@ -350,6 +364,9 @@ class SessionManager: ObservableObject {
         completedSessions.append(session)
         lastCompletedSession = session
         saveSessions()
+        
+        // Send completed session to watch
+        watchConnectivityManager?.sendCompletedSessionToWatch(session)
         
         // Sync with Firebase (creates collections automatically)
         Task {
@@ -383,7 +400,7 @@ class SessionManager: ObservableObject {
     }
     
     // MARK: - Data Persistence
-    private func saveSessions() {
+    func saveSessions() {
         if let data = try? JSONEncoder().encode(completedSessions) {
             UserDefaults.standard.set(data, forKey: "completedSessions")
         }

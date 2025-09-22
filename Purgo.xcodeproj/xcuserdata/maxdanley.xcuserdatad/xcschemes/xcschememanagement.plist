@@ -4,15 +4,58 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
+		<key>Promises (Playground).xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
+		</dict>
 		<key>Purgo.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>3</integer>
+		</dict>
+		<key>PurgoWatch Watch App (Notification).xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>4</integer>
+		</dict>
+		<key>PurgoWatch Watch App.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>0</integer>
 		</dict>
 		<key>PurgoWidgetsExtension.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>1</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>312849D52E7106ED00554BD1</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>312849E12E7106EE00554BD1</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>312849EB2E7106EE00554BD1</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>31DED1732E600661001DBBB9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>31DED1C62E600E8D001DBBB9</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

@@ -167,6 +167,8 @@ struct FriendsPageView: View {
         switch selectedTab {
         case .friends:
             FriendsListView(firebaseManager: firebaseManager)
+        case .findFriends:
+            FindFriendsView(firebaseManager: firebaseManager)
         case .leaderboard:
             FitnessStyleLeaderboardView(firebaseManager: firebaseManager, selectedPeriod: $selectedPeriod, selectedScope: $selectedScope)
         case .profile:
@@ -374,6 +376,9 @@ struct ProfileView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var isUpdatingProfilePicture = false
     @State private var showAllSessions = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
+    @StateObject private var inviteManager = InviteManager()
     
     var body: some View {
         ScrollView {
@@ -476,6 +481,29 @@ struct ProfileView: View {
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
+                
+                // Share button
+                Button(action: {
+                    Task {
+                        await inviteManager.shareInviteLink()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .semibold))
+                        
+                        Text("Share Profile")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.blue)
+                    )
+                }
+                .padding(.top, 8)
             }
         }
     }
@@ -609,6 +637,43 @@ struct ProfileView: View {
                         .stroke(Color.red.opacity(0.3), lineWidth: 1)
                 )
             }
+            
+            Button(action: {
+                showingDeleteAccountAlert = true
+            }) {
+                HStack {
+                    if isDeletingAccount {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .red))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "trash")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    
+                    Text(isDeletingAccount ? "Deleting..." : "Delete Account")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.red.opacity(0.1))
+                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .disabled(isDeletingAccount)
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await deleteAccount()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including sessions, friends, and achievements.")
         }
     }
     
@@ -660,6 +725,19 @@ struct ProfileView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 .scaleEffect(1.5)
+        }
+    }
+    
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        
+        let success = await firebaseManager.deleteAccount()
+        
+        isDeletingAccount = false
+        
+        if !success {
+            // Show error message if deletion failed
+            // The error message is already set in FirebaseManager
         }
     }
 }
@@ -1625,6 +1703,610 @@ struct FriendProfileView: View {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(minutes)m"
+        }
+    }
+}
+
+// MARK: - Find Friends View
+struct FindFriendsView: View {
+    @ObservedObject var firebaseManager: FirebaseManager
+    @StateObject private var contactManager = ContactManager()
+    @StateObject private var friendSuggestionManager = FriendSuggestionManager()
+    @StateObject private var inviteManager = InviteManager()
+    @State private var selectedSection: FindFriendsSection = .suggestions
+    
+    enum FindFriendsSection: String, CaseIterable {
+        case suggestions = "Suggested"
+        case contacts = "Contacts"
+        case invite = "Invite"
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Section selector
+                HStack(spacing: 0) {
+                    ForEach(FindFriendsSection.allCases, id: \.self) { section in
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedSection = section
+                            }
+                        }) {
+                            Text(section.rawValue)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(selectedSection == section ? .black : .gray)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(sectionButtonBackground(isSelected: selectedSection == section))
+                        }
+                    }
+                }
+                .padding(4)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white.opacity(0.1))
+                )
+                
+                // Content based on selected section
+                selectedSectionContent
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+        }
+        .background(Color.black.ignoresSafeArea())
+        .onAppear {
+            Task {
+                await friendSuggestionManager.loadFriendSuggestions()
+            }
+        }
+        .alert("Error", isPresented: .constant(contactManager.errorMessage != nil || friendSuggestionManager.errorMessage != nil || inviteManager.errorMessage != nil)) {
+            Button("OK") {
+                contactManager.clearError()
+                friendSuggestionManager.clearError()
+                inviteManager.clearError()
+            }
+        } message: {
+            Text(contactManager.errorMessage ?? friendSuggestionManager.errorMessage ?? inviteManager.errorMessage ?? "")
+        }
+    }
+    
+    private func sectionButtonBackground(isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(isSelected ? Color.white : Color.clear)
+    }
+    
+    @ViewBuilder
+    private var selectedSectionContent: some View {
+        switch selectedSection {
+        case .suggestions:
+            SuggestionsSectionView(friendSuggestionManager: friendSuggestionManager)
+        case .contacts:
+            ContactsSectionView(contactManager: contactManager)
+        case .invite:
+            InviteSectionView(inviteManager: inviteManager)
+        }
+    }
+}
+
+// MARK: - Suggestions Section
+struct SuggestionsSectionView: View {
+    @ObservedObject var friendSuggestionManager: FriendSuggestionManager
+    @State private var showingMutualFriends = false
+    @State private var selectedSuggestion: FriendSuggestion?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("People You May Know")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text("Based on mutual friends and connections")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            if friendSuggestionManager.isLoading {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .tint(.white)
+                    
+                    Text("Finding suggestions...")
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else if friendSuggestionManager.suggestions.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.gray)
+                    
+                    Text("No suggestions available")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text("Connect with more people to see suggestions")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(friendSuggestionManager.suggestions) { suggestion in
+                        SuggestionCardView(
+                            suggestion: suggestion,
+                            onSendRequest: {
+                                Task {
+                                    await friendSuggestionManager.sendFriendRequest(to: suggestion.id)
+                                }
+                            },
+                            onShowMutualFriends: {
+                                selectedSuggestion = suggestion
+                                showingMutualFriends = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingMutualFriends) {
+            if let suggestion = selectedSuggestion {
+                MutualFriendsView(suggestion: suggestion)
+            }
+        }
+    }
+}
+
+// MARK: - Contacts Section
+struct ContactsSectionView: View {
+    @ObservedObject var contactManager: ContactManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Find Friends from Contacts")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text("Connect with people you know from your contacts")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            if contactManager.contactsPermissionStatus == .notDetermined {
+                VStack(spacing: 16) {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundColor(.blue)
+                    
+                    Text("Access Your Contacts")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text("We'll help you find friends who are already using Purgo")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        Task {
+                            await contactManager.requestContactsPermission()
+                        }
+                    }) {
+                        Text("Allow Access")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue)
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else if contactManager.contactsPermissionStatus == .denied {
+                VStack(spacing: 16) {
+                    Image(systemName: "person.crop.circle.badge.exclamationmark")
+                        .font(.system(size: 48))
+                        .foregroundColor(.red)
+                    
+                    Text("Contacts Access Denied")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text("Enable contacts access in Settings to find friends")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(settingsUrl)
+                        }
+                    }) {
+                        Text("Open Settings")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.red)
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else if contactManager.isLoading {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .tint(.white)
+                    
+                    Text("Scanning contacts...")
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else if contactManager.contactMatches.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "person.2.slash")
+                        .font(.system(size: 48))
+                        .foregroundColor(.gray)
+                    
+                    Text("No matches found")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    Text("None of your contacts are using Purgo yet")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(contactManager.contactMatches) { match in
+                        ContactMatchCardView(
+                            match: match,
+                            onSendRequest: {
+                                Task {
+                                    await contactManager.sendFriendRequest(to: match.id)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Invite Section
+struct InviteSectionView: View {
+    @ObservedObject var inviteManager: InviteManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Invite Friends")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text("Share Purgo with your friends and family")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            VStack(spacing: 20) {
+                // Invite link display
+                VStack(spacing: 12) {
+                    Text("Your Invite Link")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    if let inviteLink = inviteManager.currentInviteLink {
+                        HStack {
+                            Text(inviteLink)
+                                .font(.system(size: 14, family: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.1))
+                                )
+                            
+                            Button(action: {
+                                UIPasteboard.general.string = inviteLink
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    } else {
+                        Button(action: {
+                            Task {
+                                await inviteManager.generateInviteLink()
+                            }
+                        }) {
+                            HStack {
+                                if inviteManager.isLoading {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "link")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                
+                                Text(inviteManager.isLoading ? "Generating..." : "Generate Invite Link")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue)
+                            )
+                        }
+                    }
+                }
+                
+                // Share button
+                Button(action: {
+                    Task {
+                        await inviteManager.shareInviteLink()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 18, weight: .semibold))
+                        
+                        Text("Share Invite Link")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green)
+                    )
+                }
+                .disabled(inviteManager.currentInviteLink == nil)
+                
+                // Benefits section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Why invite friends?")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        BenefitRow(icon: "trophy.fill", text: "Compete on leaderboards together")
+                        BenefitRow(icon: "chart.line.uptrend.xyaxis", text: "Track progress and motivate each other")
+                        BenefitRow(icon: "person.2.fill", text: "Build a community of wellness enthusiasts")
+                        BenefitRow(icon: "gift.fill", text: "Unlock special achievements and rewards")
+                    }
+                }
+                .padding(.top, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Supporting Views
+struct SuggestionCardView: View {
+    let suggestion: FriendSuggestion
+    let onSendRequest: () -> Void
+    let onShowMutualFriends: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Profile image
+            AsyncImage(url: URL(string: suggestion.profileImage ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.gray)
+                    )
+            }
+            .frame(width: 50, height: 50)
+            .clipShape(Circle())
+            
+            // User info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(suggestion.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text("@\(suggestion.username)")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                Text(suggestion.suggestedReason)
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+            
+            Spacer()
+            
+            // Action buttons
+            VStack(spacing: 8) {
+                Button(action: onSendRequest) {
+                    Text(suggestion.isInvited ? "Invited" : "Add")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(suggestion.isInvited ? .gray : .white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(suggestion.isInvited ? Color.gray.opacity(0.3) : Color.blue)
+                        )
+                }
+                .disabled(suggestion.isInvited)
+                
+                if suggestion.mutualFriendsCount > 0 {
+                    Button(action: onShowMutualFriends) {
+                        Text("\(suggestion.mutualFriendsCount) mutual")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+struct ContactMatchCardView: View {
+    let match: ContactMatch
+    let onSendRequest: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Profile image
+            AsyncImage(url: URL(string: match.profileImage ?? "")) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .foregroundColor(.gray)
+                    )
+            }
+            .frame(width: 50, height: 50)
+            .clipShape(Circle())
+            
+            // User info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(match.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text(match.suggestedReason)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                
+                if match.mutualFriends > 0 {
+                    Text("\(match.mutualFriends) mutual friend\(match.mutualFriends == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            Spacer()
+            
+            // Action button
+            Button(action: onSendRequest) {
+                Text(match.isInvited ? "Invited" : "Add")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(match.isInvited ? .gray : .white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(match.isInvited ? Color.gray.opacity(0.3) : Color.blue)
+                    )
+            }
+            .disabled(match.isInvited)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+struct MutualFriendsView: View {
+    let suggestion: FriendSuggestion
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(suggestion.mutualFriends) { friend in
+                    HStack(spacing: 12) {
+                        AsyncImage(url: URL(string: friend.profileImage ?? "")) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(friend.name)
+                                .font(.headline)
+                            
+                            Text("@\(friend.username)")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .navigationTitle("Mutual Friends")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct BenefitRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.green)
+                .frame(width: 20)
+            
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(.white)
         }
     }
 }

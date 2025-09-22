@@ -25,10 +25,14 @@ struct TimerPageView: View {
                 Color.black
                     .ignoresSafeArea()
                 
+                // Centered layout that works on all devices
                 VStack(spacing: 0) {
+                    // Top spacer for proper centering
+                    Spacer()
+                        .frame(height: max(20, geometry.size.height * 0.1))
+                    
                     // Timer display at top
                     TimerDisplayView(sessionManager: sessionManager)
-                        .padding(.top, 20)
                         .frame(height: 120)
                         .animation(.easeInOut(duration: 0.6), value: sessionManager.isRunning)
                         .animation(.easeInOut(duration: 0.6), value: sessionManager.isPaused)
@@ -36,7 +40,7 @@ struct TimerPageView: View {
                     // Dynamic button layout based on session state
                     if sessionManager.isRunning || sessionManager.isPaused {
                         // Session active layout
-                        VStack(spacing: 0) {
+                        VStack(spacing: 20) {
                             // Pause/Resume button in top position
                             BigSessionButton(
                                 title: sessionManager.isPaused ? "RESUME" : "PAUSE",
@@ -52,7 +56,7 @@ struct TimerPageView: View {
                                     }
                                 }
                             )
-                            .frame(height: geometry.size.height * 0.14)
+                            .frame(height: 70)
                             .transition(.asymmetric(
                                 insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.8, dampingFraction: 0.7)),
                                 removal: .scale.combined(with: .opacity).animation(.easeInOut(duration: 0.5))
@@ -66,8 +70,7 @@ struct TimerPageView: View {
                                 isRunning: sessionManager.isRunning,
                                 progressPercentage: sessionManager.progressPercentage
                             )
-                            .frame(width: min(geometry.size.width * 0.7, 250), height: min(geometry.size.width * 0.7, 250))
-                            .frame(height: geometry.size.height * 0.48)
+                            .frame(width: min(geometry.size.width * 0.5, 180), height: min(geometry.size.width * 0.5, 180))
                             .scaleEffect(sessionManager.isRunning ? 1.0 : 0.9)
                             .animation(.spring(response: 0.8, dampingFraction: 0.6), value: sessionManager.isRunning)
                             .animation(.spring(response: 0.8, dampingFraction: 0.6), value: sessionManager.isPaused)
@@ -83,7 +86,7 @@ struct TimerPageView: View {
                                     }
                                 }
                             )
-                            .frame(height: geometry.size.height * 0.14)
+                            .frame(height: 70)
                             .transition(.asymmetric(
                                 insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.8, dampingFraction: 0.7)),
                                 removal: .scale.combined(with: .opacity).animation(.easeInOut(duration: 0.5))
@@ -95,7 +98,7 @@ struct TimerPageView: View {
                         ))
                     } else {
                         // Default layout with start session buttons
-                        VStack(spacing: 0) {
+                        VStack(spacing: 20) {
                             // Start Sauna Session Button - top half
                             BigSessionButton(
                                 title: "START SAUNA SESSION",
@@ -116,7 +119,7 @@ struct TimerPageView: View {
                                     }
                                 }
                             )
-                            .frame(height: geometry.size.height * 0.14)
+                            .frame(height: 70)
                             .transition(.asymmetric(
                                 insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.8, dampingFraction: 0.7)),
                                 removal: .scale.combined(with: .opacity).animation(.easeInOut(duration: 0.5))
@@ -130,8 +133,7 @@ struct TimerPageView: View {
                                 isRunning: sessionManager.isRunning,
                                 progressPercentage: sessionManager.progressPercentage
                             )
-                            .frame(width: min(geometry.size.width * 0.7, 250), height: min(geometry.size.width * 0.7, 250))
-                            .frame(height: geometry.size.height * 0.48)
+                            .frame(width: min(geometry.size.width * 0.5, 180), height: min(geometry.size.width * 0.5, 180))
                             .scaleEffect(animateSauna || animateCold ? 1.1 : 1.0)
                             .animation(.spring(response: 0.8, dampingFraction: 0.6), value: animateSauna)
                             .animation(.spring(response: 0.8, dampingFraction: 0.6), value: animateCold)
@@ -156,7 +158,7 @@ struct TimerPageView: View {
                                     }
                                 }
                             )
-                            .frame(height: geometry.size.height * 0.14)
+                            .frame(height: 70)
                             .transition(.asymmetric(
                                 insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.8, dampingFraction: 0.7)),
                                 removal: .scale.combined(with: .opacity).animation(.easeInOut(duration: 0.5))
@@ -168,10 +170,11 @@ struct TimerPageView: View {
                         ))
                     }
                     
+                    // Bottom spacer for proper centering
                     Spacer()
+                        .frame(height: max(120, geometry.size.height * 0.15))
                 }
-                .padding(.horizontal, 40)
-                .padding(.bottom, 120)
+                .padding(.horizontal, 20)
                 
                 // Encouragement popup overlay
                 if showingEncouragementPopup {

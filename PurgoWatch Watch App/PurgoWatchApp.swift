@@ -1,17 +1,20 @@
 //
 //  PurgoWatchApp.swift
-//  PurgoWatch Watch App
+//  PurgoWatch
 //
-//  Created by Max Danley on 9/9/25.
+//  Created by Max Danley on 8/27/25.
 //
 
 import SwiftUI
 
 @main
-struct PurgoWatch_Watch_AppApp: App {
+struct PurgoWatchApp: App {
+    @StateObject private var watchSessionManager = WatchSessionManager()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(watchSessionManager)
         }
     }
 }

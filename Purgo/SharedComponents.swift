@@ -24,6 +24,7 @@ enum AppTab: String, CaseIterable {
 
 enum FriendsTab: String, CaseIterable {
     case friends = "Friends"
+    case findFriends = "Find Friends"
     case leaderboard = "Leaderboard"
     case profile = "Profile"
 }
@@ -225,21 +226,46 @@ struct SessionHistoryRow: View {
 // MARK: - Goal Selection View
 struct GoalSelectionView: View {
     @ObservedObject var sessionManager: SessionManager
-    @State private var selectedGoal: SessionGoal?
+    @State private var selectedGoal: SessionGoal
     @State private var sessionTypeToStart: SessionType = .sauna
     @State private var saunaTemperature: Double = 180 // Default 180°F
     
+    init(sessionManager: SessionManager) {
+        self.sessionManager = sessionManager
+        
+        // Get the pending session type immediately
+        let pendingType = sessionManager.pendingSessionType ?? .sauna
+        
+        // Initialize with the correct session type and goal
+        self._selectedGoal = State(initialValue: sessionManager.suggestedNextGoal(for: pendingType) ?? SessionGoal.defaultGoal(for: pendingType))
+        self._sessionTypeToStart = State(initialValue: pendingType)
+    }
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                headerSection
-                temperatureSliderSection
-                goalsGridSection
-                startButtonSection
-                Spacer()
+            GeometryReader { geometry in
+                ZStack {
+                    // Dark background
+                    Color.black
+                        .ignoresSafeArea()
+                    
+                    // ScrollView with content moved up (no logo)
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            headerSection
+                            temperatureSliderSection
+                            goalsGridSection
+                            startButtonSection
+                            
+                            // Bottom spacer for scrollability
+                            Spacer()
+                                .frame(height: max(100, geometry.size.height * 0.15))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10) // Small top padding to align with cancel button
+                    }
+                }
             }
-            .padding()
-            .background(Color.black.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -251,22 +277,15 @@ struct GoalSelectionView: View {
             }
         }
         .onAppear {
-            sessionTypeToStart = sessionManager.pendingSessionType ?? .sauna
-            selectedGoal = sessionManager.suggestedNextGoal(for: sessionTypeToStart)
             print("🎯 GoalSelectionView onAppear:")
             print("📝 Session type to start: \(sessionTypeToStart)")
-            print("🎯 Selected goal: \(selectedGoal?.displayName ?? "nil")")
+            print("🎯 Selected goal: \(selectedGoal.displayName)")
         }
     }
     
     @ViewBuilder
     private var headerSection: some View {
         VStack(spacing: 10) {
-            Image("InfinityIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 80, height: 80)
-            
             Text("Choose Your Goal")
                 .font(.title2)
                 .fontWeight(.bold)
@@ -317,7 +336,7 @@ struct GoalSelectionView: View {
             ForEach(SessionGoal.goals(for: sessionTypeToStart), id: \.duration) { goal in
                 GoalButton(
                     goal: goal,
-                    isSelected: selectedGoal?.duration == goal.duration,
+                    isSelected: selectedGoal.duration == goal.duration,
                     isRecommended: goal.duration == sessionManager.suggestedNextGoal(for: sessionTypeToStart)?.duration,
                     sessionType: sessionTypeToStart,
                     saunaTemperature: saunaTemperature
@@ -330,18 +349,16 @@ struct GoalSelectionView: View {
     
     @ViewBuilder
     private var startButtonSection: some View {
-        if let selected = selectedGoal {
-            Button("Start Session") {
-                sessionManager.selectGoalAndStart(selected, type: sessionTypeToStart)
-            }
-            .font(.title2)
-            .fontWeight(.semibold)
-            .foregroundColor(.white)
-            .padding(.horizontal, 40)
-            .padding(.vertical, 16)
-            .background(startButtonGradient())
-            .cornerRadius(25)
+        Button("Start Session") {
+            sessionManager.selectGoalAndStart(selectedGoal, type: sessionTypeToStart)
         }
+        .font(.title2)
+        .fontWeight(.semibold)
+        .foregroundColor(.white)
+        .padding(.horizontal, 40)
+        .padding(.vertical, 16)
+        .background(startButtonGradient())
+        .cornerRadius(25)
     }
     
     private func startButtonGradient() -> LinearGradient {

@@ -11,6 +11,7 @@ struct ContentView: View {
     @StateObject private var sessionManager = SessionManager()
     @StateObject private var liveActivityManager = LiveActivityManager()
     @ObservedObject private var firebaseManager = FirebaseManager.shared
+    @StateObject private var permissionManager = PermissionManager.shared
     @State private var animateSauna = false
     @State private var animateCold = false
     @State private var selectedTab: AppTab = .timer
@@ -63,7 +64,16 @@ struct ContentView: View {
         }
         .onAppear {
             sessionManager.setFirebaseManager(firebaseManager)
+            sessionManager.setWatchConnectivityManager(WatchConnectivityManager.shared)
+            WatchConnectivityManager.shared.setSessionManager(sessionManager)
             firebaseManager.checkAuthenticationState()
+            
+            // Request all permissions on first launch - delay to ensure loading screen is done
+            if permissionManager.shouldRequestPermissions {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    permissionManager.requestAllPermissions()
+                }
+            }
         }
     }
     

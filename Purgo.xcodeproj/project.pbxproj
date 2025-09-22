@@ -47,6 +47,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		312849F62E7106EE00554BD1 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		31DED1E22E600E8E001DBBB9 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -88,6 +98,21 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		312849D72E7106ED00554BD1 /* PurgoWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "PurgoWatch Watch App";
+			sourceTree = "<group>";
+		};
+		312849E52E7106EE00554BD1 /* PurgoWatch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "PurgoWatch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		312849EF2E7106EE00554BD1 /* PurgoWatch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "PurgoWatch Watch AppUITests";
+			sourceTree = "<group>";
+		};
 		31DED1762E600661001DBBB9 /* Purgo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -166,6 +191,9 @@
 				31DED1852E600662001DBBB9 /* PurgoTests */,
 				31DED18F2E600662001DBBB9 /* PurgoUITests */,
 				31DED1CD2E600E8D001DBBB9 /* PurgoWidgets */,
+				312849D72E7106ED00554BD1 /* PurgoWatch Watch App */,
+				312849E52E7106EE00554BD1 /* PurgoWatch Watch AppTests */,
+				312849EF2E7106EE00554BD1 /* PurgoWatch Watch AppUITests */,
 				31DED1C82E600E8D001DBBB9 /* Frameworks */,
 				31DED1752E600661001DBBB9 /* Products */,
 				3128497D2E68066100554BD1 /* GoogleService-Info.plist */,
@@ -203,6 +231,7 @@
 				31DED1712E600661001DBBB9 /* Frameworks */,
 				31DED1722E600661001DBBB9 /* Resources */,
 				31DED1E22E600E8E001DBBB9 /* Embed Foundation Extensions */,
+				312849F62E7106EE00554BD1 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);

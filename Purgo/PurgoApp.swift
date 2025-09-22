@@ -18,6 +18,7 @@ import ActivityKit
 @main
 struct PurgoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State private var isLoading = true
     
     init() {
         FirebaseManager.configureFirebase()
@@ -27,19 +28,63 @@ struct PurgoApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                    // App is coming back to foreground - timers will automatically recalculate based on Date
-                    print("🔄 App entering foreground - timers will auto-sync")
+            ZStack {
+                if isLoading {
+                    LoadingScreenView()
+                        .transition(.opacity)
+                } else {
+                    ContentView()
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                            // App is coming back to foreground - timers will automatically recalculate based on Date
+                            print("🔄 App entering foreground - timers will auto-sync")
+                        }
+                        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                            // App is going to background - time-based calculation ensures accuracy
+                            print("📱 App entering background - time calculation continues")
+                        }
+                        .onOpenURL { url in
+                            // Handle Google Sign-In callback
+                            print("📱 Handling URL: \(url)")
+                            GIDSignIn.sharedInstance.handle(url)
+                        }
                 }
-                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                    // App is going to background - time-based calculation ensures accuracy
-                    print("📱 App entering background - time calculation continues")
+            }
+            .onAppear {
+                // Show loading screen for a shorter duration, then fade out
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        isLoading = false
+                    }
                 }
-                .onOpenURL { url in
-                    // Handle Google Sign-In callback
-                    print("📱 Handling URL: \(url)")
-                    GIDSignIn.sharedInstance.handle(url)
+            }
+        }
+    }
+}
+
+// MARK: - Loading Screen View
+struct LoadingScreenView: View {
+    @State private var logoScale: CGFloat = 0.8
+    @State private var logoOpacity: Double = 0.0
+    
+    var body: some View {
+        ZStack {
+            // Black background
+            Color.black
+                .ignoresSafeArea()
+            
+            // Centered infinity logo
+            Image("InfinityIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .scaleEffect(logoScale)
+                .opacity(logoOpacity)
+                .onAppear {
+                    // Animate logo appearance
+                    withAnimation(.easeOut(duration: 1.0)) {
+                        logoScale = 1.0
+                        logoOpacity = 1.0
+                    }
                 }
         }
     }
@@ -56,16 +101,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
         
-        // Request notification permissions
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            print("📱 Notification permission granted: \(granted)")
-            if let error = error {
-                print("❌ Notification permission error: \(error)")
-            }
-        }
-        
-        // Register for remote notifications
-        application.registerForRemoteNotifications()
+        // Note: Notification permissions are now handled by PermissionManager
+        // to ensure they appear back-to-back with tracking permissions
         
         return true
     }
